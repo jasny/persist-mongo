@@ -35,6 +35,11 @@ class OneOrMany
             throw new UnsupportedFeatureException($msg);
         }
 
+        if (isset($limit) && $limit->getOffset() !== 0) {
+            $msg = "MongoDB can't $method a document based on an offset";
+            throw new UnsupportedFeatureException($msg);
+        }
+
         $query->setMethod($method . (isset($limit) ? 'One' : 'Many'));
     }
 }

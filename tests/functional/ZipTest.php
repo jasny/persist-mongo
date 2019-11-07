@@ -54,7 +54,7 @@ class ZipTest extends TestCase
             $this->cloneCollection(); // Only clone if data is changed as cloning slows down the tests.
         }
 
-        $this->logger = getenv('FUNCTIONAL_TESTS_DEBUG') === 'on'
+        $this->logger = getenv('JASNY_DB_TESTS_DEBUG') === 'on'
             ? new Logger('MongoDB', [new StreamHandler(STDERR)])
             : new Logger('MongoDB', [new NullHandler()]);
 
@@ -265,7 +265,9 @@ class ZipTest extends TestCase
      */
     public function testUpdate()
     {
-        $this->writer->update(["_id" => "10004"], update\set(["city" => "NEW YORK"]));
+        $result = $this->writer->update(["_id" => "10004"], update\set(["city" => "NEW YORK"]));
+
+        $this->assertEquals(1, $result->getMeta('count'));
 
         $expected = [
             '_id' => "10004",
@@ -276,6 +278,98 @@ class ZipTest extends TestCase
         ];
 
         $this->assertInMongoCollection($expected, "10004");
+    }
+
+    protected function initWriterWithNear(): void
+    {
+        $this->collection->createIndex(['loc' => "2d"]);
+
+        $queryBuilder = $this->writer->getQueryBuilder()
+            ->withCustomOperator(
+                'near',
+                static function (FilterQuery $query, FilterItem $filter, array $opts) {
+                    [$field, $value] = [$filter->getField(), $filter->getValue()];
+                    $dist = opts\setting('near', 1.0)->findIn($opts);
+
+                    $query->add([$field => ['$geoWithin' => ['$center' => [$value, $dist]]]]);
+                }
+            );
+
+        $builders = [
+            $queryBuilder,
+            $this->writer->getUpdateQueryBuilder(),
+            $this->writer->getSaveQueryBuilder(),
+            $this->writer->getResultBuilder(),
+        ];
+
+        $this->writer = (new Writer(...$builders))
+            ->forCollection($this->collection)
+            ->withLogging($this->logger);
+    }
+
+    /**
+     * @group write
+     */
+    public function testUpdateNear()
+    {
+        $this->initWriterWithNear();
+
+        $result = $this->writer->update(
+            ['loc(near)' => [-72.622739, 42.070206]],
+            update\set(["state" => "AD"]),
+            [opts\setting('near', 0.1)]
+        );
+
+        $this->assertEquals(14, $result->getMeta('count'));
+        $this->assertEquals(14, $this->reader->count(["state" => "AD"]));
+    }
+
+    /**
+     * @group write
+     */
+    public function testUpdateWithLimit()
+    {
+        $result = $this->writer->update(
+            ["city" => "NEW YORK"],
+            update\set(["city" => "NEW YORK CITY"]),
+            [opts\limit(1)]
+        );
+
+        $this->assertEquals(1, $result->getMeta('count'));
+        $this->assertEquals(1, $this->reader->count(["city" => "NEW YORK CITY"]));
+    }
+
+
+    /**
+     * @group write
+     */
+    public function testDelete()
+    {
+        $result = $this->writer->delete(["_id" => "10004"]);
+
+        $this->assertEquals(1, $result->getMeta('count'));
+
+        $this->assertNotInMongoCollection("10004");
+    }
+
+    /**
+     * @group write
+     */
+    public function testDeleteNear()
+    {
+        $this->initWriterWithNear();
+
+        $countBefore = $this->reader->count();
+
+        $result = $this->writer->delete(
+            ['loc(near)' => [-72.622739, 42.070206]],
+            [opts\setting('near', 0.1)]
+        );
+
+        $this->assertEquals(14, $result->getMeta('count'));
+
+        $removedCount = $countBefore - $this->reader->count();
+        $this->assertEquals(14, $removedCount);
     }
 
 
