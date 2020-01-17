@@ -17,6 +17,8 @@ use function Jasny\object_set_properties;
 
 /**
  * Save data to a MongoDB collection.
+ *
+ * @template TItem
  */
 trait SaveTrait
 {
@@ -37,10 +39,9 @@ trait SaveTrait
      * Save the one item.
      * Returns a result with the generated id.
      *
-     * @param object|array $item
+     * @param TItem             $item
      * @param OptionInterface[] $opts
      * @return Result
-     * @throws BuildQueryException
      */
     public function save($item, array $opts = []): Result
     {
@@ -51,9 +52,9 @@ trait SaveTrait
      * Save multiple items.
      * Returns a result with the generated ids.
      *
-     * @param iterable          $items
+     * @param iterable<TItem>   $items
      * @param OptionInterface[] $opts
-     * @return Result
+     * @return Result<TItem|\stdClass>
      */
     public function saveAll(iterable $items, array $opts = []): Result
     {
@@ -83,7 +84,7 @@ trait SaveTrait
      *
      * @param array             $index
      * @param BulkWriteResult   $writeResult
-     * @return Result
+     * @return Result<\stdClass>
      */
     protected function createSaveResult(array $index, BulkWriteResult $writeResult): Result
     {
@@ -103,7 +104,7 @@ trait SaveTrait
             + array_fill(0, count($index), null);
 
         // Turn id values into arrays before mapping is applied.
-        $documents = i\iterable_map($ids, fn($id) => ($id === null ? [] : ['_id' => $id]));
+        $documents = i\iterable_map($ids, fn($id) => (object)($id === null ? [] : ['_id' => $id]));
 
         return $this->createResult($documents, $meta)->setKeys($index);
     }

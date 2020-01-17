@@ -12,9 +12,14 @@ use MongoDB\Collection;
  */
 trait CollectionTrait
 {
-    use Immutable\With;
-
     protected Collection $collection;
+
+    /**
+     * @param string $property
+     * @param mixed  $value
+     * @return self
+     */
+    abstract protected function withProperty(string $property, $value);
 
     /**
      * Create a copy of this service, linked to the MongoDB collection.

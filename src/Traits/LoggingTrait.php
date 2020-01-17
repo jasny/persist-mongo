@@ -13,9 +13,14 @@ use Psr\Log\LoggerInterface;
  */
 trait LoggingTrait
 {
-    use Immutable\With;
-
     protected ?LoggerInterface $logger;
+
+    /**
+     * @param string $property
+     * @param mixed  $value
+     * @return self
+     */
+    abstract protected function withProperty(string $property, $value);
 
     /**
      * Get the mongodb collection the associated with the service.
@@ -27,7 +32,7 @@ trait LoggingTrait
      *
      * @return static
      */
-    public function withLogging(LoggerInterface $logger): self
+    public function withLogging(LoggerInterface $logger)
     {
         return $this->withProperty('logger', $logger);
     }

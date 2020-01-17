@@ -2,12 +2,12 @@
 
 namespace Jasny\DB\Mongo;
 
+use Jasny\Immutable;
 use Jasny\DB\FieldMap\ConfiguredFieldMap;
 use Jasny\DB\FieldMap\FieldMapInterface;
 use Jasny\DB\Mongo\QueryBuilder\Compose\FilterComposer;
 use Jasny\DB\Mongo\QueryBuilder\Compose\SaveComposer;
 use Jasny\DB\Mongo\QueryBuilder\Compose\UpdateComposer;
-use Jasny\DB\Mongo\QueryBuilder\Finalize\ApplyOptions;
 use Jasny\DB\Mongo\QueryBuilder\Finalize\ConflictResolution;
 use Jasny\DB\Mongo\QueryBuilder\Finalize\OneOrMany;
 use Jasny\DB\QueryBuilder\FilterQueryBuilder;
@@ -15,13 +15,14 @@ use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\QueryBuilder\SaveQueryBuilder;
 use Jasny\DB\QueryBuilder\UpdateQueryBuilder;
 use Jasny\DB\Result\ResultBuilder;
-use Jasny\DB\WriteInterface;
+use Jasny\DB\Writer\WriteInterface;
 
 /**
  * Fetch data from a MongoDB collection
  */
 class Writer implements WriteInterface
 {
+    use Immutable\With;
     use Traits\CollectionTrait;
     use Traits\ResultTrait;
     use Traits\LoggingTrait;

@@ -10,14 +10,16 @@ use Jasny\DB\Mongo\QueryBuilder\Compose\FilterComposer;
 use Jasny\DB\Mongo\QueryBuilder\Finalize\ApplyOptions;
 use Jasny\DB\QueryBuilder\FilterQueryBuilder;
 use Jasny\DB\QueryBuilder\QueryBuilderInterface;
-use Jasny\DB\ReadInterface;
+use Jasny\DB\Reader\ReadInterface;
 use Jasny\DB\Result\ResultBuilder;
+use Jasny\Immutable;
 
 /**
  * Fetch data from a MongoDB collection
  */
 class Reader implements ReadInterface
 {
+    use Immutable\With;
     use Traits\CollectionTrait;
     use Traits\ResultTrait;
     use Traits\LoggingTrait;
