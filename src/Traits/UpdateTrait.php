@@ -59,15 +59,13 @@ trait UpdateTrait
         $mongoOptions = $updateQuery->getOptions();
 
         $this->debug("%s.$method", [
-            'filter' => $mongoFilter,
+            'query' => $mongoFilter,
             'update' => $mongoUpdate,
             'options' => $mongoOptions
         ]);
 
         /** @var UpdateResult|BulkWriteResult $writeResult */
-        $writeResult = $method === 'updateOne'
-            ? $this->getCollection()->updateOne($mongoFilter, $mongoUpdate, $mongoOptions)
-            : $this->getCollection()->updateMany($mongoFilter, $mongoUpdate, $mongoOptions);
+        $writeResult = $this->getCollection()->{$method}($mongoFilter, $mongoUpdate, $mongoOptions);
 
         return $this->createUpdateResult($writeResult);
     }

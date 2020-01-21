@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Traits;
 
+use Jasny\DB\Reader\ReadInterface;
 use Jasny\Immutable;
 use MongoDB\Collection;
 use Psr\Log\LoggerInterface;
@@ -32,7 +33,7 @@ trait LoggingTrait
      *
      * @return static
      */
-    public function withLogging(LoggerInterface $logger)
+    public function withLogging(LoggerInterface $logger): ReadInterface
     {
         return $this->withProperty('logger', $logger);
     }
