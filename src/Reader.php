@@ -34,6 +34,7 @@ class Reader implements ReadInterface
         $this->resultBuilder = $resultBuilder;
     }
 
+
     /**
      * Get the query builder used by this service.
      */
@@ -43,11 +44,33 @@ class Reader implements ReadInterface
     }
 
     /**
+     * Get a copy with a different query builder.
+     *
+     * @param QueryBuilderInterface $builder
+     * @return static
+     */
+    public function withQueryBuilder(QueryBuilderInterface $builder): self
+    {
+        return $this->withProperty('queryBuilder', $builder);
+    }
+
+    /**
      * Get the result builder used by this service.
      */
     public function getResultBuilder(): ResultBuilder
     {
         return $this->resultBuilder;
+    }
+
+    /**
+     * Get a copy with a different result builder.
+     *
+     * @param ResultBuilder $builder
+     * @return static
+     */
+    public function withResultBuilder(ResultBuilder $builder): self
+    {
+        return $this->withProperty('resultBuilder', $builder);
     }
 
 

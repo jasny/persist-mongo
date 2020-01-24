@@ -45,6 +45,7 @@ class Writer implements WriteInterface
         $this->resultBuilder = $resultBuilder;
     }
 
+
     /**
      * Get the query builder used by this service.
      * This builder is used for filtering delete and update queries.
@@ -52,6 +53,17 @@ class Writer implements WriteInterface
     public function getQueryBuilder(): QueryBuilderInterface
     {
         return $this->queryBuilder;
+    }
+
+    /**
+     * Get a copy with a different query builder.
+     *
+     * @param QueryBuilderInterface $builder
+     * @return static
+     */
+    public function withQueryBuilder(QueryBuilderInterface $builder): self
+    {
+        return $this->withProperty('queryBuilder', $builder);
     }
 
     /**
@@ -63,11 +75,33 @@ class Writer implements WriteInterface
     }
 
     /**
-     * Get the update query builder used by this service.
+     * Get a copy with a different query builder.
+     *
+     * @param QueryBuilderInterface $builder
+     * @return static
+     */
+    public function withUpdateQueryBuilder(QueryBuilderInterface $builder): self
+    {
+        return $this->withProperty('updateQueryBuilder', $builder);
+    }
+
+    /**
+     * Get the save query builder used by this service.
      */
     public function getSaveQueryBuilder(): QueryBuilderInterface
     {
         return $this->saveQueryBuilder;
+    }
+
+    /**
+     * Get a copy with a different save query builder.
+     *
+     * @param QueryBuilderInterface $builder
+     * @return static
+     */
+    public function withSaveQueryBuilder(QueryBuilderInterface $builder): self
+    {
+        return $this->withProperty('saveQueryBuilder', $builder);
     }
 
     /**
@@ -76,6 +110,17 @@ class Writer implements WriteInterface
     public function getResultBuilder(): ResultBuilder
     {
         return $this->resultBuilder;
+    }
+
+    /**
+     * Get a copy with a different result builder.
+     *
+     * @param ResultBuilder $builder
+     * @return static
+     */
+    public function withResultQueryBuilder(ResultBuilder $builder): self
+    {
+        return $this->withProperty('resultBuilder', $builder);
     }
 
 
