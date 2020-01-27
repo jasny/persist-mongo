@@ -33,7 +33,7 @@ trait LoggingTrait
      *
      * @return static
      */
-    public function withLogging(LoggerInterface $logger): ReadInterface
+    public function withLogging(LoggerInterface $logger)
     {
         return $this->withProperty('logger', $logger);
     }

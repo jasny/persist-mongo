@@ -34,7 +34,6 @@ trait ReadTrait
      * @param array             $filter
      * @param OptionInterface[] $opts
      * @return int
-     * @throws BuildQueryException
      */
     public function count(array $filter = [], array $opts = []): int
     {
@@ -58,7 +57,6 @@ trait ReadTrait
      * @param array             $filter
      * @param OptionInterface[] $opts
      * @return Result
-     * @throws BuildQueryException
      */
     public function fetch(array $filter = [], array $opts = []): Result
     {
