@@ -8,7 +8,7 @@ use Improved\IteratorPipeline\Pipeline;
 use MongoDB\BSON\Serializable as BSONSerializable;
 use MongoDB\BSON\Unserializable as BSONUnserializable;
 use MongoDB\Model\BSONArray;
-use function Jasny\DB\Mongo\Common\is_assoc;
+use function Jasny\DB\Mongo\is_assoc;
 
 /**
  * BSON representation of an associative array.
@@ -68,16 +68,5 @@ class BSONAssoc extends BSONArray implements BSONSerializable, BSONUnserializabl
     public function jsonSerialize(): \stdClass
     {
         return (object)$this->getArrayCopy();
-    }
-
-    /**
-     * Is value an associative array.
-     *
-     * @param mixed $value
-     * @return bool
-     */
-    protected static function isAssoc($value): bool
-    {
-        return is_array($value) && array_keys($value) !== array_keys(array_keys($value));
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo;
 
+use Improved as i;
+
 /**
  * Is value an associative array.
  *

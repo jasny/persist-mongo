@@ -23,7 +23,8 @@
         "improved/function": "^0.1.1",
         "improved/iterable": "~0.1",
         "jasny/db": "dev-master as 3.0.0",
-        "mongodb/mongodb": "^1.4"
+        "mongodb/mongodb": "^1.4",
+        "ramsey/uuid": "^3.9"
     },
     "require-dev": {
         "jasny/php-code-quality": "^2.5",
