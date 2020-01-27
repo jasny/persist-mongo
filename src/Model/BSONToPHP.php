@@ -7,6 +7,7 @@ namespace Jasny\DB\Mongo\Model;
 use Improved\IteratorPipeline\Pipeline;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectIdInterface;
+use MongoDB\BSON\Type as BSONType;
 use MongoDB\BSON\UTCDateTimeInterface;
 use MongoDB\Model\BSONArray;
 use MongoDB\Model\BSONDocument;
@@ -22,6 +23,7 @@ class BSONToPHP
         'convertBSONArray',
         'convertObjectId',
         'convertUUID',
+        'convertUTCDateTime',
     ];
 
     /**
@@ -42,25 +44,18 @@ class BSONToPHP
     }
 
     /**
-     * Invoke converter.
-     *
-     * @param iterable|mixed $value
-     * @return iterable|mixed
-     */
-    public function __invoke($value)
-    {
-        return is_iterable($value) ? $this->convertAll($value) : $this->convert($value);
-    }
-
-    /**
-     * Convert value to PHP type.
+     * Convert value.
      *
      * @param mixed $value
      * @return mixed
      */
-    public function convert($value)
+    public function __invoke($value)
     {
         foreach ($this->steps as $step) {
+            if (!$value instanceof BSONType) {
+                break;
+            }
+
             $value = $step($value);
         }
 
@@ -68,30 +63,12 @@ class BSONToPHP
     }
 
     /**
-     * Convert all values to PHP types.
-     *
-     * @param array|iterable $values
-     * @return array|iterable
-     */
-    public function convertAll(iterable $values): iterable
-    {
-        $pipeline = $values instanceof Pipeline ? $values : Pipeline::with($values);
-
-        foreach ($this->steps as $step) {
-            $pipeline->map($step);
-        }
-
-        return is_array($values) ? $pipeline->toArray() : $pipeline;
-    }
-
-
-    /**
      * Convert BSONDocument to stdClass.
      */
     protected function convertBSONDocument($value)
     {
         return $value instanceof BSONDocument
-            ? (object)$this->convertAll($value)->toArray()
+            ? (object)Pipeline::with($value)->map($this)->toArray()
             : $value;
     }
 
@@ -101,7 +78,7 @@ class BSONToPHP
     protected function convertBSONArray($value)
     {
         return $value instanceof BSONArray
-            ? $this->convertAll($value)->toArray()
+            ? Pipeline::with($value)->map($this)->toArray()
             : $value;
     }
 

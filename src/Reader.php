@@ -6,6 +6,7 @@ namespace Jasny\DB\Mongo;
 
 use Jasny\DB\FieldMap\ConfiguredFieldMap;
 use Jasny\DB\FieldMap\FieldMapInterface;
+use Jasny\DB\Mongo\Model\BSONToPHP;
 use Jasny\DB\Mongo\QueryBuilder\Compose\FilterComposer;
 use Jasny\DB\Mongo\QueryBuilder\Finalize\ApplyOptions;
 use Jasny\DB\QueryBuilder\FilterQueryBuilder;
@@ -114,7 +115,7 @@ class Reader implements ReadInterface
 
         return new static(
             $queryBuilder,
-            new ResultBuilder($map),
+            (new ResultBuilder($map))->map(new BSONToPHP()),
         );
     }
 }
