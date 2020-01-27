@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Jasny\DB\Mongo;
 
@@ -16,6 +18,7 @@ use Jasny\DB\QueryBuilder\SaveQueryBuilder;
 use Jasny\DB\QueryBuilder\UpdateQueryBuilder;
 use Jasny\DB\Result\ResultBuilder;
 use Jasny\DB\Writer\WriteInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Fetch data from a MongoDB collection
@@ -25,10 +28,11 @@ class Writer implements WriteInterface
     use Immutable\With;
     use Traits\CollectionTrait;
     use Traits\ResultTrait;
-    use Traits\LoggingTrait;
     use Traits\SaveTrait;
     use Traits\UpdateTrait;
     use Traits\DeleteTrait;
+
+    protected LoggerInterface $logger;
 
     /**
      * Reader constructor.
@@ -43,6 +47,28 @@ class Writer implements WriteInterface
         $this->updateQueryBuilder = $updateQueryBuilder;
         $this->saveQueryBuilder = $saveQueryBuilder;
         $this->resultBuilder = $resultBuilder;
+    }
+
+
+    /**
+     * Enable (debug) logging.
+     *
+     * @return static
+     */
+    public function withLogging(LoggerInterface $logger): self
+    {
+        return $this->withProperty('logger', $logger);
+    }
+
+    /**
+     * Log a debug message.
+     *
+     * @param string       $message
+     * @param array<mixed> $context
+     */
+    protected function debug(string $message, array $context): void
+    {
+        $this->logger->debug(sprintf($message, $this->getCollection()->getCollectionName()), $context);
     }
 
 

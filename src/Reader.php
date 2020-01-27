@@ -13,6 +13,8 @@ use Jasny\DB\QueryBuilder\QueryBuilderInterface;
 use Jasny\DB\Reader\ReadInterface;
 use Jasny\DB\Result\ResultBuilder;
 use Jasny\Immutable;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Fetch data from a MongoDB collection
@@ -22,8 +24,9 @@ class Reader implements ReadInterface
     use Immutable\With;
     use Traits\CollectionTrait;
     use Traits\ResultTrait;
-    use Traits\LoggingTrait;
     use Traits\ReadTrait;
+
+    protected LoggerInterface $logger;
 
     /**
      * Reader constructor.
@@ -32,6 +35,30 @@ class Reader implements ReadInterface
     {
         $this->queryBuilder = $queryBuilder;
         $this->resultBuilder = $resultBuilder;
+
+        $this->logger = new NullLogger();
+    }
+
+
+    /**
+     * Enable (debug) logging.
+     *
+     * @return static
+     */
+    public function withLogging(LoggerInterface $logger): self
+    {
+        return $this->withProperty('logger', $logger);
+    }
+
+    /**
+     * Log a debug message.
+     *
+     * @param string       $message
+     * @param array<mixed> $context
+     */
+    protected function debug(string $message, array $context): void
+    {
+        $this->logger->debug(sprintf($message, $this->getCollection()->getCollectionName()), $context);
     }
 
 
