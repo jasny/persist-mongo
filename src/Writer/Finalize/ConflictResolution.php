@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder\Finalize;
+namespace Jasny\DB\Mongo\Writer\Finalize;
 
 use Jasny\DB\Mongo\Query\WriteQuery;
-use Jasny\DB\Option as opts;
+use Jasny\DB\Option\Functions as opts;
 use Jasny\DB\Option\OptionInterface;
 use function Jasny\DB\Mongo\flatten_fields;
 

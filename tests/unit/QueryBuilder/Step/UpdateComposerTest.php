@@ -5,7 +5,7 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 use Improved as i;
 use Improved\Iterator\CombineIterator;
 use Jasny\DB\Exception\InvalidUpdateOperationException;
-use Jasny\DB\Mongo\QueryBuilder\Compose\UpdateComposer;
+use Jasny\DB\Mongo\QueryBuilder\Update\UpdateComposer;
 use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use OverflowException;
 use PHPUnit\Framework\TestCase;
@@ -14,8 +14,8 @@ use PHPUnit\Framework\TestCase;
  * The purpose of the compose step is to create callbacks that apply logic to the query object. To test if the callback
  *   works as expected, they're invoked as they would the during build step.
  *
- * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\AbstractComposer
- * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\UpdateComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Update\AbstractComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Update\UpdateComposer
  */
 class UpdateComposerTest extends TestCase
 {

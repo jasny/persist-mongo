@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Tests\Functional;
 
 use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\FieldMap\ConfiguredFieldMap;
-use Jasny\DB\FieldMap\FieldMapInterface;
-use Jasny\DB\Mongo\FieldMap\Vermongo;
-use Jasny\DB\Mongo\QueryBuilder\Compose\SaveComposer;
-use Jasny\DB\Mongo\QueryBuilder\Finalize\ConflictResolution;
-use Jasny\DB\Mongo\Reader;
-use Jasny\DB\Mongo\Writer;
-use Jasny\DB\Option as opts;
+use Jasny\DB\Map\FieldMap;
+use Jasny\DB\Map\MapInterface;
+use Jasny\DB\Mongo\Map\Vermongo;
+use Jasny\DB\Mongo\Save\SaveComposer;
+use Jasny\DB\Mongo\Reader\Reader;
+use Jasny\DB\Mongo\Writer\Finalize\ConflictResolution;
+use Jasny\DB\Mongo\Writer\Writer;
+use Jasny\DB\Option\Functions as opts;
 use Jasny\DB\QueryBuilder\SaveQueryBuilder;
+use Jasny\DB\Save\Prepare\MapItems;
 use Jasny\DB\Writer\MultiWrite;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Client;
@@ -43,27 +44,19 @@ class VermongoTest extends TestCase
 
     protected Logger $logger;
 
-    public function createBaseWriter(FieldMapInterface $map): Writer
+    public function createBaseWriter(MapInterface $map): Writer
     {
-        $basicWriter = Writer::basic($map);
-
         $saveQueryBuilder = (new SaveQueryBuilder(new SaveComposer()))
-            ->withPreparation(static function (iterable $items) use ($map) {
-                return Pipeline::with($items)
-                    ->apply(static function (object $item) {
-                        $item->id ??= new ObjectId();
-                        $item->version ??= new ObjectId();
-                    })
-                    ->then([$map, 'applyToItems']);
-            })
+            ->withPreparation(
+                Pipeline::build()->apply(static function (object $item) {
+                    $item->id ??= new ObjectId();
+                    $item->version ??= new ObjectId();
+                }),
+                new MapItems(),
+            )
             ->withFinalization(new ConflictResolution());
 
-        return new Writer(
-            $basicWriter->getQueryBuilder(),
-            $basicWriter->getUpdateQueryBuilder(),
-            $saveQueryBuilder,
-            $basicWriter->getResultBuilder()
-        );
+        return (new Writer($map))->withSaveQueryBuilder($saveQueryBuilder);
     }
 
     public function setUp(): void
@@ -78,14 +71,14 @@ class VermongoTest extends TestCase
             ? new Logger('MongoDB', [new StreamHandler(STDERR)])
             : new Logger('MongoDB', [new NullHandler()]);
 
-        $map = new ConfiguredFieldMap(['_id' => 'id', '_version' => 'version']);
+        $map = new FieldMap(['_id' => 'id', '_version' => 'version']);
         $vermongoMap = new Vermongo($map);
 
         $baseWriter = $this->createBaseWriter($map)->forCollection($this->collection);
-        $vermongoWriter = Writer::basic($vermongoMap)->forCollection($this->vermongo);
+        $vermongoWriter = (new Writer($vermongoMap))->forCollection($this->vermongo);
 
         $this->writer = (new MultiWrite($baseWriter, $vermongoWriter))->withLogging($this->logger);
-        $this->reader = Reader::basic($vermongoMap)->forCollection($this->vermongo)->withLogging($this->logger);
+        $this->reader = (new Reader($vermongoMap))->forCollection($this->vermongo)->withLogging($this->logger);
     }
 
     public function tearDown(): void

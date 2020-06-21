@@ -2,46 +2,43 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Traits;
+namespace Jasny\DB\Mongo\Writer;
 
 use Improved as i;
+use Jasny\DB\Exception\UnsupportedFeatureException;
+use Jasny\DB\Map\MapInterface;
+use Jasny\DB\Mongo\AbstractService;
+use Jasny\DB\Mongo\Map\AssertMap;
 use Jasny\DB\Mongo\Query\WriteQuery;
-use Jasny\DB\Option as opts;
-use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
+use Jasny\DB\Mongo\Save\SaveComposer;
+use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\QueryBuilder\SaveQueryBuilder;
 use Jasny\DB\Result\Result;
+use Jasny\DB\Save\Prepare\MapItems;
+use Jasny\DB\Writer\WriteInterface;
 use MongoDB\BulkWriteResult;
-use MongoDB\Collection;
-use UnexpectedValueException;
-use function Jasny\object_set_properties;
 
 /**
  * Save data to a MongoDB collection.
  *
  * @template TItem
  */
-trait SaveTrait
+class Save extends AbstractService implements WriteInterface
 {
-    protected QueryBuilderInterface $saveQueryBuilder;
-
     /**
-     * Get MongoDB collection object.
+     * Class constructor.
      */
-    abstract public function getCollection(): Collection;
+    public function __construct(?MapInterface $map = null)
+    {
+        parent::__construct($map);
+
+        $this->queryBuilder = (new SaveQueryBuilder(new SaveComposer()))
+            ->withPreparation(AssertMap::asPreparation(), new MapItems());
+    }
+
 
     /**
-     * Create a result.
-     */
-    abstract protected function createResult(iterable $cursor, array $meta = []): Result;
-
-
-    /**
-     * Save the one item.
-     * Returns a result with the generated id.
-     *
-     * @param TItem             $item
-     * @param OptionInterface[] $opts
-     * @return Result
+     * @inheritDoc
      */
     public function save($item, array $opts = []): Result
     {
@@ -49,17 +46,17 @@ trait SaveTrait
     }
 
     /**
-     * Save multiple items.
-     * Returns a result with the generated ids.
-     *
-     * @param iterable<TItem>   $items
-     * @param OptionInterface[] $opts
-     * @return Result<TItem|\stdClass>
+     * @inheritDoc
      */
     public function saveAll(iterable $items, array $opts = []): Result
     {
+        $this->configureMap($opts);
+
+        $applyResult = opts\apply_result()->isIn($opts);
+        $items = $applyResult ? i\iterable_to_array($items) : $items;
+
         $query = new WriteQuery(['ordered' => false]);
-        $this->saveQueryBuilder->apply($query, $items, $opts);
+        $this->queryBuilder->apply($query, $items, $opts);
 
         $query->expectMethods('insertOne', 'replaceOne', 'updateOne');
         $mongoOperations = $query->getOperations();
@@ -69,9 +66,9 @@ trait SaveTrait
 
         $writeResult = $this->getCollection()->bulkWrite($mongoOperations, $mongoOptions);
 
-        $result = $this->createSaveResult($query->getIndex(), $writeResult);
+        $result = $this->createSaveResult($query->getIndex(), $writeResult, $opts);
 
-        if (opts\apply_result()->isIn($opts)) {
+        if ($applyResult) {
             /** @var array $items */
             $result = $result->applyTo($items);
         }
@@ -86,7 +83,7 @@ trait SaveTrait
      * @param BulkWriteResult   $writeResult
      * @return Result<\stdClass>
      */
-    protected function createSaveResult(array $index, BulkWriteResult $writeResult): Result
+    protected function createSaveResult(array $index, BulkWriteResult $writeResult, array $opts): Result
     {
         $meta = [];
 
@@ -106,6 +103,27 @@ trait SaveTrait
         // Turn id values into arrays before mapping is applied.
         $documents = i\iterable_map($ids, fn($id) => (object)($id === null ? [] : ['_id' => $id]));
 
-        return $this->createResult($documents, $meta)->setKeys($index);
+        return $this->resultBuilder->withOpts($opts)
+            ->with($documents, $meta)
+            ->setKeys($index);
+    }
+
+
+    /**
+     * @inheritDoc
+     * @throws UnsupportedFeatureException
+     */
+    public function update(array $filter, $instructions, array $opts = []): Result
+    {
+        throw new UnsupportedFeatureException("Save only writer; update is not supported");
+    }
+
+    /**
+     * @inheritDoc
+     * @throws UnsupportedFeatureException
+     */
+    public function delete(array $filter, array $opts = []): Result
+    {
+        throw new UnsupportedFeatureException("Save only writer; delete is not supported");
     }
 }

@@ -5,14 +5,14 @@ namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 use Improved as i;
 use Improved\Iterator\CombineIterator;
 use Jasny\DB\Exception\InvalidFilterException;
-use Jasny\DB\Mongo\QueryBuilder\Compose\FilterComposer;
+use Jasny\DB\Mongo\QueryBuilder\Update\FilterComposer;
 use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use OverflowException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\AbstractComposer
- * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\FilterComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Update\AbstractComposer
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Update\FilterComposer
  */
 class FilterComposerTest extends TestCase
 {

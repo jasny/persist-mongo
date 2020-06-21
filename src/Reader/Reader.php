@@ -2,31 +2,43 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Traits;
+namespace Jasny\DB\Mongo\Reader;
 
-use Jasny\DB\Exception\BuildQueryException;
+use Jasny\DB\Map\MapInterface;
+use Jasny\DB\Filter\Prepare\MapFilter;
+use Jasny\DB\Mongo\AbstractService;
+use Jasny\DB\Mongo\Filter\FilterComposer;
+use Jasny\DB\Mongo\Filter\Finalize\ApplyFields;
+use Jasny\DB\Mongo\Filter\Finalize\ApplyLimit;
+use Jasny\DB\Mongo\Filter\Finalize\ApplySort;
+use Jasny\DB\Mongo\Map\AssertMap;
+use Jasny\DB\Mongo\Model\BSONToPHP;
 use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
+use Jasny\DB\QueryBuilder\FilterQueryBuilder;
+use Jasny\DB\Reader\ReadInterface;
 use Jasny\DB\Result\Result;
-use MongoDB\Collection;
+use Jasny\Immutable;
 
 /**
- * Read data from a MongoDB collection.
+ * Fetch data from a MongoDB collection
  */
-trait ReadTrait
+class Reader extends AbstractService implements ReadInterface
 {
-    protected QueryBuilderInterface $queryBuilder;
+    use Immutable\With;
 
     /**
-     * Get the mongodb collection the associated with the service.
+     * Reader constructor.
      */
-    abstract public function getCollection(): Collection;
+    public function __construct(?MapInterface $map = null)
+    {
+        parent::__construct($map);
 
-    /**
-     * Create a result.
-     */
-    abstract protected function createResult(iterable $cursor, array $meta = []): Result;
+        $this->queryBuilder = (new FilterQueryBuilder(new FilterComposer()))
+            ->withPreparation(AssertMap::asPreparation(), new MapFilter())
+            ->withFinalization(new ApplyFields(), new ApplySort(), new ApplyLimit());
+    }
+
 
     /**
      * Fetch the number of entities in the set.
@@ -37,6 +49,8 @@ trait ReadTrait
      */
     public function count(array $filter = [], array $opts = []): int
     {
+        $this->configureMap($opts);
+
         $query = new FilterQuery('countDocuments');
         $this->queryBuilder->apply($query, $filter, $opts);
 
@@ -60,6 +74,8 @@ trait ReadTrait
      */
     public function fetch(array $filter = [], array $opts = []): Result
     {
+        $this->configureMap($opts);
+
         $query = new FilterQuery('find');
         $this->queryBuilder->apply($query, $filter, $opts);
 
@@ -76,6 +92,8 @@ trait ReadTrait
             ? $this->getCollection()->find($mongoFilter, $mongoOptions)
             : $this->getCollection()->aggregate($mongoFilter, $mongoOptions);
 
-        return $this->createResult($cursor);
+        return $this->resultBuilder->withOpts($opts)
+            ->with($cursor)
+            ->map(new BSONToPHP());
     }
 }

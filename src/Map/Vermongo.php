@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\FieldMap;
+namespace Jasny\DB\Mongo\Map;
 
 use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\FieldMap\FieldMapInterface;
+use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Filter\FilterItem;
+use Jasny\DB\Map\NoMap;
 use Jasny\DB\Update\UpdateInstruction;
 use MongoDB\BSON\ObjectId;
 
@@ -14,18 +15,18 @@ use MongoDB\BSON\ObjectId;
  * Mapping for vermongo style versioning collection.
  * @see https://github.com/thiloplanz/v7files/wiki/Vermongo
  */
-class Vermongo implements FieldMapInterface
+class Vermongo implements MapInterface
 {
-    protected FieldMapInterface $map;
+    protected MapInterface $map;
 
     /**
      * Vermongo constructor.
      *
-     * @param FieldMapInterface $map  Wrapped field map
+     * @param MapInterface|null $map  Wrapped field map
      */
-    public function __construct(FieldMapInterface $map)
+    public function __construct(?MapInterface $map = null)
     {
-        $this->map = $map;
+        $this->map = $map ?? new NoMap();
     }
 
     /**
@@ -76,7 +77,8 @@ class Vermongo implements FieldMapInterface
 
         foreach ($instructions as &$instruction) {
             $pairs = Pipeline::with($instruction->getPairs())
-                ->mapKeys(fn($_, string $key) => $key === '_id' || $key === '_version' ? "_id.$key" : $key);
+                ->mapKeys(fn($_, string $key) => $key === '_id' || $key === '_version' ? "_id.$key" : $key)
+                ->toArray();
 
             if ($instruction->getPairs() !== $pairs) {
                 $instruction = new UpdateInstruction($instruction->getOperator(), $pairs);
@@ -96,12 +98,13 @@ class Vermongo implements FieldMapInterface
                 if (is_object($item) && isset($item->_id) && !$item->_id instanceof ObjectId) {
                     $id = $item->_id;
                     $item->_id = $id->_id;
-                    $item->_version = $id->_version;
+                    $item->_version = $id->_version ?? null;
                 }
 
                 if (is_array($item) && isset($item['_id']) && !$item['_id'] instanceof ObjectId) {
                     $id = $item['_id'];
-                    $item = $id + $item;
+                    $item['_id'] = $id['_id'];
+                    $item['_version'] = $id['_version'] ?? null;
                 }
 
                 return $item;
@@ -131,5 +134,37 @@ class Vermongo implements FieldMapInterface
 
                 return $item;
             });
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function withOpts(array $opts): MapInterface
+    {
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function applyToField(string $field)
+    {
+        // TODO: Implement applyToField() method.
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function apply($item)
+    {
+        // TODO: Implement apply() method.
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function applyInverse($item)
+    {
+        // TODO: Implement applyInverse() method.
     }
 }

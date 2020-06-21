@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder\Compose;
+namespace Jasny\DB\Mongo\Filter;
 
 use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Mongo\Query\FilterQuery;

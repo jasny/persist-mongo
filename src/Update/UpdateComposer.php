@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder\Compose;
+namespace Jasny\DB\Mongo\Update;
 
-use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Mongo\Query\UpdateQuery;
 use Jasny\DB\Option\OptionInterface;

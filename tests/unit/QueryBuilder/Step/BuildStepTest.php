@@ -3,7 +3,7 @@
 namespace Jasny\DB\Mongo\Tests\QueryBuilder\Step;
 
 use Improved\Iterator\CombineIterator;
-use Jasny\DB\Mongo\QueryBuilder\Compose\BuildQuery;
+use Jasny\DB\Mongo\QueryBuilder\Update\BuildQuery;
 use Jasny\DB\Mongo\QueryBuilder\FilterQuery;
 use Jasny\DB\Mongo\QueryBuilder\OptionConverter;
 use Jasny\DB\Option\OptionInterface;
@@ -13,7 +13,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Jasny\DB\Mongo\QueryBuilder\Compose\BuildQuery
+ * @covers \Jasny\DB\Mongo\QueryBuilder\Update\BuildQuery
  */
 class BuildStepTest extends TestCase
 {

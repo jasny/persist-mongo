@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\QueryBuilder\Compose;
+namespace Jasny\DB\Mongo\Save;
 
 use Jasny\DB\Mongo\Query\WriteQuery;
 use Jasny\DB\Option\OptionInterface;

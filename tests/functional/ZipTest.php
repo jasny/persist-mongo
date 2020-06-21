@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Tests\Functional;
 
 use Improved as i;
-use Jasny\DB\FieldMap\ConfiguredFieldMap;
+use Jasny\DB\Map\FieldMap;
 use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Mongo\Query\FilterQuery;
-use Jasny\DB\Mongo\Reader;
-use Jasny\DB\Mongo\Writer;
-use Jasny\DB\Option as opts;
-use Jasny\DB\Update as update;
+use Jasny\DB\Mongo\Reader\Reader;
+use Jasny\DB\Mongo\Writer\Writer;
+use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Update\Functions as update;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Client;
 use MongoDB\Collection;
@@ -58,10 +58,10 @@ class ZipTest extends TestCase
             ? new Logger('MongoDB', [new StreamHandler(STDERR)])
             : new Logger('MongoDB', [new NullHandler()]);
 
-        $map = new ConfiguredFieldMap(['_id' => 'id']);
+        $map = new FieldMap(['id' => '_id']);
 
-        $this->reader = Reader::basic($map)->forCollection($this->collection)->withLogging($this->logger);
-        $this->writer = Writer::basic($map)->forCollection($this->collection)->withLogging($this->logger);
+        $this->reader = (new Reader($map))->forCollection($this->collection)->withLogging($this->logger);
+        $this->writer = (new Writer($map))->forCollection($this->collection)->withLogging($this->logger);
     }
 
     public function tearDown(): void
@@ -140,7 +140,8 @@ class ZipTest extends TestCase
                 }
             );
 
-        $this->reader = (new Reader($queryBuilder, $this->reader->getResultBuilder()))
+        $this->reader = $this->reader
+            ->withQueryBuilder($queryBuilder)
             ->forCollection($this->collection)
             ->withLogging($this->logger);
 
@@ -160,13 +161,13 @@ class ZipTest extends TestCase
             ["zipcode" => "10004", "city" => "GOVERNORS ISLAND"],
         ];
 
-        $fieldMap = new ConfiguredFieldMap([
-            '_id' => 'zipcode',
+        $map = new FieldMap([
+            'zipcode' => '_id',
             'city' => 'city',
-            'state' => 'area'
+            'area' => 'state',
         ]);
 
-        $this->reader = Reader::basic($fieldMap)->forCollection($this->collection)->withLogging($this->logger);
+        $this->reader = (new Reader($map))->forCollection($this->collection)->withLogging($this->logger);
 
         $result = $this->reader->fetch(
             ['area' => "NY"],
@@ -193,7 +194,7 @@ class ZipTest extends TestCase
             $location = $locations[$key];
 
             $expected = ['_id' => $location['id']] + array_diff_key($location, ['id' => 0]);
-            $this->assertInMongoCollection($expected, $document['id']);
+            $this->assertInMongoCollection($expected, $document->id);
         }
     }
 
@@ -225,19 +226,30 @@ class ZipTest extends TestCase
      */
     public function testSaveAllWithCustomFieldMap()
     {
-        $fieldMap = new ConfiguredFieldMap([
-            '_id' => 'ref',
+        $map = new FieldMap([
+            'ref' => '_id',
             'city' => 'city',
-            'loc' => 'latlon',
-            'state' => 'area'
+            'latlon' => 'loc',
+            'area' => 'state'
         ]);
 
-        $this->writer = Writer::basic($fieldMap)->forCollection($this->collection)->withLogging($this->logger);
+        $this->writer = (new Writer($map))
+            ->forCollection($this->collection)
+            ->withLogging($this->logger);
 
         $locations = [
-            'a' => (object)["city" => "BLUE HILLS", "latlon" => [-118.406477, 34.092], "area" => "CA"],
-            '2' => (object)["city" => "BLUE HILLS", "latlon" => [-118.407, 34.0], "pop" => 99, "area" => "CA",
-                "bar" => 'r'],
+            'a' => (object)[
+                "city" => "BLUE HILLS",
+                "latlon" => [-118.406477, 34.092],
+                "area" => "CA",
+            ],
+            '2' => (object)[
+                "city" => "BLUE HILLS",
+                "latlon" => [-118.407, 34.0],
+                "pop" => 99,
+                "area" => "CA",
+                "bar" => 'r',
+            ],
         ];
 
         $result = $this->writer->saveAll($locations, [opts\apply_result()]);
@@ -295,16 +307,7 @@ class ZipTest extends TestCase
                 }
             );
 
-        $builders = [
-            $queryBuilder,
-            $this->writer->getUpdateQueryBuilder(),
-            $this->writer->getSaveQueryBuilder(),
-            $this->writer->getResultBuilder(),
-        ];
-
-        $this->writer = (new Writer(...$builders))
-            ->forCollection($this->collection)
-            ->withLogging($this->logger);
+        $this->writer = $this->writer->withQueryBuilder($queryBuilder);
     }
 
     /**
