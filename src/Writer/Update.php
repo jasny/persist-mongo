@@ -4,23 +4,27 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Writer;
 
+use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Exception\UnsupportedFeatureException;
-use Jasny\DB\Filter\Prepare\MapFilter;
+use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Mongo\AbstractService;
-use Jasny\DB\Mongo\Filter\FilterComposer;
 use Jasny\DB\Mongo\Map\AssertMap;
+use Jasny\DB\Mongo\Query\Filter\FilterComposer;
 use Jasny\DB\Mongo\Query\FilterQuery;
+use Jasny\DB\Mongo\Query\Update\OneOrMany;
+use Jasny\DB\Mongo\Query\Update\UpdateComposer;
 use Jasny\DB\Mongo\Query\UpdateQuery;
-use Jasny\DB\Mongo\QueryBuilder\Finalize\OneOrMany;
-use Jasny\DB\Mongo\Update\UpdateComposer;
+use Jasny\DB\Option\LimitOption;
 use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\QueryBuilder\FilterQueryBuilder;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
-use Jasny\DB\QueryBuilder\UpdateQueryBuilder;
+use Jasny\DB\Query\ApplyMapToFilter;
+use Jasny\DB\Query\ApplyMapToUpdate;
+use Jasny\DB\Query\Composer;
+use Jasny\DB\Query\ComposerInterface;
+use Jasny\DB\Query\FilterParser;
+use Jasny\DB\Query\SetMap;
 use Jasny\DB\Result\Result;
-use Jasny\DB\Update\Prepare\MapUpdate;
 use Jasny\DB\Update\UpdateInstruction;
 use Jasny\DB\Writer\WriteInterface;
 use Jasny\Immutable;
@@ -29,12 +33,15 @@ use MongoDB\UpdateResult;
 
 /**
  * Update data of a MongoDB collection.
+ *
+ * @extends AbstractService<FilterQuery,FilterItem>
  */
 class Update extends AbstractService implements WriteInterface
 {
     use Immutable\With;
 
-    protected QueryBuilderInterface $updateQueryBuilder;
+    /** @phpstan-var ComposerInterface<UpdateQuery,UpdateInstruction> */
+    protected ComposerInterface $updateComposer;
 
     /**
      * Class constructor.
@@ -43,40 +50,47 @@ class Update extends AbstractService implements WriteInterface
     {
         parent::__construct($map);
 
-        $this->queryBuilder = (new FilterQueryBuilder(new FilterComposer()))
-            ->withPreparation(AssertMap::asPreparation(), new MapFilter())
-            ->withFinalization(new OneOrMany());
-        $this->updateQueryBuilder = (new UpdateQueryBuilder(new UpdateComposer()))
-            ->withPreparation(AssertMap::asPreparation())
-            ->withPreparation(new MapUpdate());
+        $this->composer = new Composer(
+            new FilterParser(),
+            new SetMap(fn(MapInterface $map) => new AssertMap($map)),
+            new ApplyMapToFilter(),
+            new FilterComposer(),
+        );
+
+        $this->updateComposer = new Composer(
+            new SetMap(fn(MapInterface $map) => new AssertMap($map)),
+            new ApplyMapToUpdate(),
+            new UpdateComposer(),
+            new OneOrMany(),
+        );
     }
 
     /**
      * Get the update query builder used by this service.
      */
-    public function getUpdateQueryBuilder(): QueryBuilderInterface
+    public function getUpdateComposer(): ComposerInterface
     {
-        return $this->updateQueryBuilder;
+        return $this->updateComposer;
     }
 
     /**
      * Get a copy with a different query builder.
      *
-     * @param QueryBuilderInterface $builder
+     * @param ComposerInterface $composer
      * @return static
      */
-    public function withUpdateQueryBuilder(QueryBuilderInterface $builder): self
+    public function withUpdateComposer(ComposerInterface $composer): self
     {
-        return $this->withProperty('updateQueryBuilder', $builder);
+        return $this->withProperty('updateComposer', $composer);
     }
 
 
     /**
      * Query and update records.
      *
-     * @param array                                 $filter
-     * @param UpdateInstruction|UpdateInstruction[] $update
-     * @param OptionInterface[]                     $opts
+     * @param array<string,mixed>|FilterItem[]              $filter
+     * @param UpdateInstruction|iterable<UpdateInstruction> $update
+     * @param OptionInterface[]                             $opts
      * @return Result
      */
     public function update(array $filter, $update, array $opts = []): Result
@@ -87,25 +101,26 @@ class Update extends AbstractService implements WriteInterface
 
         $this->configureMap($opts);
 
-        $filterQuery = new FilterQuery('update');
+        $filterQuery = new FilterQuery();
         $updateQuery = new UpdateQuery($filterQuery);
 
-        $this->queryBuilder->apply($filterQuery, $filter, $opts);
-        $this->updateQueryBuilder->apply($updateQuery, $update, $opts);
+        $this->composer->compose($filterQuery, $filter, $opts);
+        $this->updateComposer->compose($updateQuery, $update, $opts);
 
-        $method = $updateQuery->getExpectedMethod('updateOne', 'updateMany');
-        $mongoFilter = $filterQuery->toArray();
-        $mongoUpdate = $updateQuery->toArray();
-        $mongoOptions = $updateQuery->getOptions();
+        $method = i\iterable_has_any($opts, fn($opt) => $opt instanceof LimitOption) ? 'updateOne' : 'updateMany';
 
         $this->debug("%s.$method", [
-            'query' => $mongoFilter,
-            'update' => $mongoUpdate,
-            'options' => $mongoOptions
+            'query' => $filterQuery->getFilter(),
+            'update' => $updateQuery->getUpdate(),
+            'options' => $updateQuery->getOptions(),
         ]);
 
         /** @var UpdateResult|BulkWriteResult $writeResult */
-        $writeResult = $this->getCollection()->{$method}($mongoFilter, $mongoUpdate, $mongoOptions);
+        $writeResult = $this->getCollection()->{$method}(
+            $filterQuery->getFilter(),
+            $updateQuery->getUpdate(),
+            $updateQuery->getOptions()
+        );
 
         return $this->createUpdateResult($writeResult, $opts);
     }

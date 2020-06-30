@@ -12,7 +12,7 @@ use Improved\IteratorPipeline\Pipeline;
  *
  * @see https://docs.mongodb.com/php-library/v1.2/reference/method/MongoDBCollection-bulkWrite/
  */
-class WriteQuery implements QueryInterface
+class WriteQuery
 {
     protected const SUPPORTED_OPERATIONS = [
         'deleteMany',
@@ -64,19 +64,6 @@ class WriteQuery implements QueryInterface
         return $this->index;
     }
 
-
-    /**
-     * Loop through all operations, replacing them with the return value of the callback
-     *
-     * @param callable $callable
-     */
-    public function map(callable $callable): void
-    {
-        foreach ($this->operations as &$operation) {
-            $operation = $callable($operation);
-        }
-    }
-
     /**
      * Add a bulk write operation. Arguments depend on the operation;
      *
@@ -122,27 +109,6 @@ class WriteQuery implements QueryInterface
     }
 
     /**
-     * It's not possible to explicitly set the save query method.
-     *
-     * @throws \LogicException
-     */
-    public function setMethod(string $method): void
-    {
-        throw new \LogicException("Unable to set method to '$method'. "
-            . "The save query method is determined based on the operations.");
-    }
-
-    /**
-     * Get the query method if it's one of the expected methods.
-     *
-     * @throws \LogicException
-     */
-    public function getExpectedMethod(string ...$expected): string
-    {
-        throw new \LogicException("Use WriteQuery::expectedMethods() instead.");
-    }
-
-    /**
      * Expect operations to be one of the given types.
      *
      * @throws \UnexpectedValueException
@@ -157,7 +123,8 @@ class WriteQuery implements QueryInterface
         $unexpected = array_diff($methods, $expected);
 
         if (count($unexpected) > 0) {
-            throw new \UnexpectedValueException("Unexpected write operations '" . join("', '", $unexpected) . "', "
+            throw new \UnexpectedValueException("Unexpected write operations '"
+                . join("', '", $unexpected) . "', "
                 . "should be one of '" . join("', '", $expected) . "'");
         }
     }

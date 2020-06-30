@@ -7,10 +7,12 @@ namespace Jasny\DB\Mongo\Tests\Functional;
 use Improved as i;
 use Jasny\DB\Map\FieldMap;
 use Jasny\DB\Filter\FilterItem;
+use Jasny\DB\Mongo\Query\Filter\PipelineStage;
 use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Mongo\Reader\Reader;
 use Jasny\DB\Mongo\Writer\Writer;
 use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Query\CustomOperator;
 use Jasny\DB\Update\Functions as update;
 use MongoDB\BSON\ObjectId;
 use MongoDB\Client;
@@ -54,7 +56,7 @@ class ZipTest extends TestCase
             $this->cloneCollection(); // Only clone if data is changed as cloning slows down the tests.
         }
 
-        $this->logger = getenv('JASNY_DB_TESTS_DEBUG') === 'on'
+        $this->logger = getenv('JASNY_DB_TESTS_DEBUG') === 'on' || true
             ? new Logger('MongoDB', [new StreamHandler(STDERR)])
             : new Logger('MongoDB', [new NullHandler()]);
 
@@ -129,21 +131,18 @@ class ZipTest extends TestCase
     {
         $this->collection->createIndex(['loc' => "2d"]);
 
-        $queryBuilder = $this->reader->getQueryBuilder()
-            ->withCustomOperator(
+        $this->reader = $this->reader->withComposer(
+            new CustomOperator(
                 'near',
                 static function (FilterQuery $query, FilterItem $filter, array $opts) {
                     [$field, $value] = [$filter->getField(), $filter->getValue()];
                     $dist = opts\setting('near', 1.0)->findIn($opts);
 
-                    $query->add([$field => ['$geoWithin' => ['$center' => [$value, $dist]]]]);
+                    $query->match([$field => ['$geoWithin' => ['$center' => [$value, $dist]]]]);
                 }
-            );
-
-        $this->reader = $this->reader
-            ->withQueryBuilder($queryBuilder)
-            ->forCollection($this->collection)
-            ->withLogging($this->logger);
+            ),
+            $this->reader->getComposer(),
+        );
 
         $filter = ['loc(near)' => [-72.622739, 42.070206]];
 
@@ -296,18 +295,18 @@ class ZipTest extends TestCase
     {
         $this->collection->createIndex(['loc' => "2d"]);
 
-        $queryBuilder = $this->writer->getQueryBuilder()
-            ->withCustomOperator(
+        $this->writer = $this->writer->withComposer(
+            new CustomOperator(
                 'near',
                 static function (FilterQuery $query, FilterItem $filter, array $opts) {
                     [$field, $value] = [$filter->getField(), $filter->getValue()];
                     $dist = opts\setting('near', 1.0)->findIn($opts);
 
-                    $query->add([$field => ['$geoWithin' => ['$center' => [$value, $dist]]]]);
+                    $query->match([$field => ['$geoWithin' => ['$center' => [$value, $dist]]]]);
                 }
-            );
-
-        $this->writer = $this->writer->withQueryBuilder($queryBuilder);
+            ),
+            $this->writer->getComposer(),
+        );
     }
 
     /**
@@ -373,6 +372,74 @@ class ZipTest extends TestCase
 
         $removedCount = $countBefore - $this->reader->count();
         $this->assertEquals(14, $removedCount);
+    }
+
+    /**
+     * @see https://docs.mongodb.com/manual/tutorial/aggregation-zip-code-data-set/#return-states-with-populations-above-10-million
+     */
+    public function testAggregation()
+    {
+        $this->reader = $this->reader
+            ->withMap(new FieldMap(['state' => '_id']))
+            ->withComposer(
+                new PipelineStage('$group', ['_id' => '$state', 'totalPop' => ['$sum' => '$pop']]),
+                $this->reader->getComposer(),
+            );
+
+        $result = $this->reader->fetch(['totalPop(min)' => 10*1000*1000], [opts\sort('~totalPop')]);
+
+        $expected = [
+            ["state" => "CA", "totalPop" => 29754890],
+            ["state" => "NY", "totalPop" => 17990402],
+            ["state" => "TX", "totalPop" => 16984601],
+            ["state" => "FL", "totalPop" => 12686644],
+            ["state" => "PA", "totalPop" => 11881643],
+            ["state" => "IL", "totalPop" => 11427576],
+            ["state" => "OH", "totalPop" => 10846517],
+        ];
+
+        $this->assertEquals($expected, i\iterable_to_array($result));
+    }
+
+    /**
+     * @see https://docs.mongodb.com/manual/tutorial/aggregation-zip-code-data-set/#return-largest-and-smallest-cities-by-state
+     */
+    public function testComplexAggregation()
+    {
+        $this->reader = $this->reader
+            ->withMap(new FieldMap(['state' => '_id']))
+            ->withComposer(
+                new PipelineStage('$group', [
+                    '_id' => ['state' => '$state', 'city' => '$city'],
+                    'pop' => ['$sum' => '$pop']
+                ]),
+                new PipelineStage('$sort', ['pop' => 1]),
+                new PipelineStage('$group', [
+                    '_id' => '$_id.state',
+                    'biggestCity' => ['$last' => '$_id.city'],
+                    'biggestPop' => ['$last' => '$pop'],
+                    'smallestCity' => ['$first' => '$_id.city'],
+                    'smallestPop' => ['$first' => '$pop'],
+                ]),
+                new PipelineStage('$project', [
+                    '_id' => '$_id',
+                    'biggestCity' => ['name' => '$biggestCity', 'pop' => '$biggestPop'],
+                    'smallestCity' => ['name' => '$smallestCity', 'pop' => '$smallestPop'],
+                ]),
+                $this->reader->getComposer(),
+            );
+
+        $result = $this->reader->fetch(['state' => 'WA']);
+
+        $expected = [
+            [
+                'state' => "WA",
+                'biggestCity' => ['name' => "SEATTLE", 'pop' => 520096],
+                'smallestCity' => ['name' => 'BENGE', 'pop' => 2],
+            ],
+        ];
+
+        $this->assertEquals($expected, i\iterable_to_array($result));
     }
 
 

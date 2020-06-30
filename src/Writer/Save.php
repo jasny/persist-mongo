@@ -9,12 +9,13 @@ use Jasny\DB\Exception\UnsupportedFeatureException;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Mongo\AbstractService;
 use Jasny\DB\Mongo\Map\AssertMap;
+use Jasny\DB\Mongo\Query\Save\SaveComposer;
 use Jasny\DB\Mongo\Query\WriteQuery;
-use Jasny\DB\Mongo\Save\SaveComposer;
 use Jasny\DB\Option\Functions as opts;
-use Jasny\DB\QueryBuilder\SaveQueryBuilder;
+use Jasny\DB\Query\ApplyMapToItems;
+use Jasny\DB\Query\Composer;
+use Jasny\DB\Query\SetMap;
 use Jasny\DB\Result\Result;
-use Jasny\DB\Save\Prepare\MapItems;
 use Jasny\DB\Writer\WriteInterface;
 use MongoDB\BulkWriteResult;
 
@@ -22,6 +23,8 @@ use MongoDB\BulkWriteResult;
  * Save data to a MongoDB collection.
  *
  * @template TItem
+ * @extends AbstractService<SaveQuery,TItem>
+ * @implements WriteInterface<TItem>
  */
 class Save extends AbstractService implements WriteInterface
 {
@@ -32,8 +35,11 @@ class Save extends AbstractService implements WriteInterface
     {
         parent::__construct($map);
 
-        $this->queryBuilder = (new SaveQueryBuilder(new SaveComposer()))
-            ->withPreparation(AssertMap::asPreparation(), new MapItems());
+        $this->composer = new Composer(
+            new SetMap(fn(MapInterface $map) => new AssertMap($map)),
+            new ApplyMapToItems(),
+            new SaveComposer(),
+        );
     }
 
 
@@ -56,15 +62,13 @@ class Save extends AbstractService implements WriteInterface
         $items = $applyResult ? i\iterable_to_array($items) : $items;
 
         $query = new WriteQuery(['ordered' => false]);
-        $this->queryBuilder->apply($query, $items, $opts);
+        $this->composer->compose($query, $items, $opts);
 
         $query->expectMethods('insertOne', 'replaceOne', 'updateOne');
-        $mongoOperations = $query->getOperations();
-        $mongoOptions = $query->getOptions();
 
-        $this->debug("%s.bulkWrite", ['operations' => $mongoOperations, 'options' => $mongoOptions]);
+        $this->debug("%s.bulkWrite", ['operations' => $query->getOperations(), 'options' => $query->getOptions()]);
 
-        $writeResult = $this->getCollection()->bulkWrite($mongoOperations, $mongoOptions);
+        $writeResult = $this->getCollection()->bulkWrite($query->getOperations(), $query->getOptions());
 
         $result = $this->createSaveResult($query->getIndex(), $writeResult, $opts);
 

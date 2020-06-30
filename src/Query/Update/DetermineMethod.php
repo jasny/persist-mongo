@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Writer\Finalize;
+namespace Jasny\DB\Mongo\Query\Update;
 
 use Jasny\DB\Mongo\Query\WriteQuery;
 use Jasny\DB\Option\Functions as opts;
@@ -12,7 +12,7 @@ use function Jasny\DB\Mongo\flatten_fields;
 /**
  * Modify write operations based on conflict resolution setting.
  */
-class ConflictResolution
+class DetermineMethod
 {
     /**
      * Apply conflict resolution.

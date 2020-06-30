@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Map;
 
-use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\Map\NoMap;
-use Jasny\DB\Option\Functions as opts;
-use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\Option\SettingOption;
 use MongoDB\BSON;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Map\Traits\ProxyTrait;
@@ -79,35 +74,5 @@ class AssertMap implements MapInterface
                 $this->assertItem($value, array_merge($parents, [$key])); // recursion
             }
         }
-    }
-
-
-    /**
-     * Get callable for prepare step to wrap map with assert map.
-     *
-     * @return \Closure
-     *
-     * @template TItems as iterable
-     * @phpstan-return callable(TItems,OptionInterface[]):TItems
-     */
-    public static function asPreparation(): \Closure
-    {
-        /**
-         * @param iterable $items
-         * @param OptionInterface[] $opts
-         * @return iterable
-         */
-        return static function (iterable $items, array &$opts): iterable {
-            /** @var MapInterface $map */
-            $map = opts\setting('map', new NoMap())->findIn($opts, MapInterface::class);
-
-            $opts = Pipeline::with($opts)
-                ->filter(fn($opt) => !($opt instanceof SettingOption) || $opt->getName() !== 'map')
-                ->toArray();
-
-            $opts[] = opts\setting('map', new self($map));
-
-            return $items;
-        };
     }
 }

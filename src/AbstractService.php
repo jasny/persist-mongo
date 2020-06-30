@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo;
 
 use Improved\IteratorPipeline\Pipeline;
+use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Map\FieldMap;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Mongo\Model\BSONToPHP;
+use Jasny\DB\Mongo\Query\Filter\FilterQuery;
 use Jasny\DB\Option\Functions as opts;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Option\SettingOption;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
+use Jasny\DB\Query\Composer;
+use Jasny\DB\Query\ComposerInterface;
 use Jasny\DB\Result\ResultBuilder;
 use Jasny\Immutable;
 use MongoDB\Collection;
@@ -20,6 +23,10 @@ use Psr\Log\NullLogger;
 
 /**
  * Abstract base class for reader and writer.
+ * @internal
+ *
+ * @template TQuery
+ * @template TQueryItem
  */
 abstract class AbstractService
 {
@@ -28,7 +35,8 @@ abstract class AbstractService
     protected Collection $collection;
     protected MapInterface $map;
 
-    protected QueryBuilderInterface $queryBuilder;
+    /** @phpstan-var ComposerInterface<TQuery,TQueryItem> */
+    protected ComposerInterface $composer;
     protected ResultBuilder $resultBuilder;
 
     protected LoggerInterface $logger;
@@ -115,22 +123,26 @@ abstract class AbstractService
 
 
     /**
-     * Get the query builder used by this service.
+     * Get the query composer used by this service.
      */
-    public function getQueryBuilder(): QueryBuilderInterface
+    public function getComposer(): ComposerInterface
     {
-        return $this->queryBuilder;
+        return $this->composer;
     }
 
     /**
-     * Get a copy with a different query builder.
+     * Get a copy with a different query composer.
+     * If multiple composers are given, they're combined.
      *
-     * @param QueryBuilderInterface $builder  Save query builder
+     * @param ComposerInterface ...$composers
      * @return static
      */
-    public function withQueryBuilder(QueryBuilderInterface $builder)
+    public function withComposer(ComposerInterface ...$composers)
     {
-        return $this->withProperty('queryBuilder', $builder);
+        return $this->withProperty(
+            'composer',
+            count($composers) === 1 ? $composers[0] : new Composer(...$composers)
+        );
     }
 
 

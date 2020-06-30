@@ -10,7 +10,7 @@ use Improved\IteratorPipeline\Pipeline;
  * Representation of a MongoDB update query.
  * This object is mutable, as it's uses as accumulator by the query builders.
  */
-class UpdateQuery implements QueryInterface
+class UpdateQuery
 {
     protected FilterQuery $filterQuery;
 
@@ -34,33 +34,6 @@ class UpdateQuery implements QueryInterface
     public function getFilterQuery(): FilterQuery
     {
         return $this->filterQuery;
-    }
-
-
-    /**
-     * Get the query method.
-     */
-    public function getMethod(): string
-    {
-        return $this->filterQuery->getMethod();
-    }
-
-    /**
-     * Get the query method if it's one of the expected methods.
-     *
-     * @throws \UnexpectedValueException
-     */
-    public function getExpectedMethod(string ...$expected): string
-    {
-        return $this->filterQuery->getExpectedMethod(...$expected);
-    }
-
-    /**
-     * Set the query method.
-     */
-    public function setMethod(string $method): void
-    {
-        $this->filterQuery->setMethod($method);
     }
 
 
@@ -95,27 +68,16 @@ class UpdateQuery implements QueryInterface
     }
 
     /**
-     * Loop through all statements, replacing them with the return value of the callback
+     * Get MongoDB update instructions.
      *
-     * @param callable $callable
+     * @return array<string,mixed>
      */
-    public function map(callable $callable): void
-    {
-        foreach ($this->statements as &$statement) {
-            $statement = $callable($statement);
-        }
-    }
-
-
-    /**
-     * Get MongoDB query statements.
-     */
-    public function toArray(): array
+    public function getUpdate(): array
     {
         return Pipeline::with($this->statements)
             ->flatten(true)
             ->group(fn($_, string $key) => $key)
-            ->map(fn(array $value, string $key) => ($key[0] === '$' ? array_merge(...$value) : end($value)))
+            ->map(fn(array $value, string $key) => ($key[0] !== '$' ? array_merge(...$value) : end($value)))
             ->toArray();
     }
 }

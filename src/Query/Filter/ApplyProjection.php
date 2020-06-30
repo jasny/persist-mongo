@@ -2,30 +2,57 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Filter\Finalize;
+namespace Jasny\DB\Mongo\Query\Filter;
 
 use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Map\NoMap;
-use Jasny\DB\Mongo\Query\QueryInterface;
+use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Option\FieldsOption;
 use Jasny\DB\Option\Functions as opts;
 use Jasny\DB\Option\OptionInterface;
+use Jasny\DB\Query\ComposerInterface;
 
 /**
- * Convert fields query option to a MongoDB query.
+ * Apply fields and omit query option(s) to a MongoDB query.
+ *
+ * @implements ComposerInterface<FilterQuery,FilterItem>
  */
-class ApplyFields
+class ApplyProjection implements ComposerInterface
 {
     /**
-     * Apply convert field/omit opts to a MongoDB query.
-     *
-     * @param QueryInterface    $query
-     * @param OptionInterface[] $opts
+     * @inheritDoc
      */
-    public function __invoke(QueryInterface $query, array $opts): void
+    public function compose(object $accumulator, iterable $items, array $opts = []): void
     {
+        $this->finalize($accumulator, $opts);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function prepare(iterable $items, array &$opts = []): iterable
+    {
+        return $items;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function apply(object $query, iterable $items, array $opts): iterable
+    {
+        return $items;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function finalize(object $query, array $opts): void
+    {
+        /** @var FilterQuery $accumulator */
+        i\type_check($query, FilterQuery::class);
+
         $projection = Pipeline::with($opts)
             ->filter(fn($opt) => $opt instanceof FieldsOption)
             ->map(fn(FieldsOption $opt) => $this->project($opt->getFields(), $opt->isNegated(), $opts))
@@ -41,7 +68,7 @@ class ApplyFields
             $projection['_id'] = 0;
         }
 
-        $query->setOption('projection', $projection);
+        $query->project($projection);
     }
 
     /**

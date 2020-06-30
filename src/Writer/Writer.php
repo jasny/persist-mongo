@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Writer;
 
 use Jasny\DB\Map\MapInterface;
-use Jasny\DB\QueryBuilder\QueryBuilderInterface;
+use Jasny\DB\Query\Composer;
+use Jasny\DB\Query\ComposerInterface;
 use Jasny\DB\Result\Result;
 use Jasny\DB\Result\ResultBuilder;
 use Jasny\DB\Writer\WriteInterface;
@@ -35,7 +36,7 @@ class Writer implements WriteInterface
         $this->update = (new Update($map))->withLogging($logger);
 
         $this->delete = (new Delete($map))
-            ->withQueryBuilder($this->update->getQueryBuilder())
+            ->withComposer($this->update->getComposer())
             ->withLogging($logger);
     }
 
@@ -110,24 +111,26 @@ class Writer implements WriteInterface
     /**
      * Get the query builder used by this service.
      */
-    public function getQueryBuilder(): QueryBuilderInterface
+    public function getComposer(): ComposerInterface
     {
         // Update and delete use the same collection, so could return the query builder of any of both.
-        return $this->update->getQueryBuilder();
+        return $this->update->getComposer();
     }
 
     /**
-     * Get a copy with a different query builder.
+     * Get a copy with a different query composer.
      *
-     * @param QueryBuilderInterface $builder  Save query builder
+     * @param ComposerInterface ...$composers
      * @return static
      */
-    public function withQueryBuilder(QueryBuilderInterface $builder): self
+    public function withComposer(ComposerInterface ...$composers): self
     {
+        $composer = count($composers) === 1 ? reset($composers) : new Composer(...$composers);
+
         $copy = clone $this;
 
-        $copy->update = $this->update->withQueryBuilder($builder);
-        $copy->delete = $this->delete->withQueryBuilder($builder);
+        $copy->update = $this->update->withComposer($composer);
+        $copy->delete = $this->delete->withComposer($composer);
 
         return $this->copyIsSame($copy) ? $this : $copy;
     }
@@ -135,21 +138,21 @@ class Writer implements WriteInterface
     /**
      * Get the query builder used by this service for save queries.
      */
-    public function getSaveQueryBuilder(): QueryBuilderInterface
+    public function getSaveComposer(): ComposerInterface
     {
-        return $this->save->getQueryBuilder();
+        return $this->save->getComposer();
     }
 
     /**
      * Get a copy with a different query builder for save .
      *
-     * @param QueryBuilderInterface $builder  Save query builder
+     * @param ComposerInterface $composer  Save query builder
      * @return static
      */
-    public function withSaveQueryBuilder(QueryBuilderInterface $builder): self
+    public function withSaveComposer(ComposerInterface $composer): self
     {
         $copy = clone $this;
-        $copy->save = $this->save->withQueryBuilder($builder);
+        $copy->save = $this->save->withComposer($composer);
 
         return $this->copyIsSame($copy) ? $this : $copy;
     }
@@ -157,21 +160,21 @@ class Writer implements WriteInterface
     /**
      * Get the query builder used by this service for update queries.
      */
-    public function getUpdateQueryBuilder(): QueryBuilderInterface
+    public function getUpdateQueryBuilder(): ComposerInterface
     {
-        return $this->update->getUpdateQueryBuilder();
+        return $this->update->getComposer();
     }
 
     /**
      * Get a copy with a different query builder for update.
      *
-     * @param QueryBuilderInterface $builder  Update query builder
+     * @param ComposerInterface $composer  Update query builder
      * @return static
      */
-    public function withUpdateQueryBuilder(QueryBuilderInterface $builder): self
+    public function withUpdateComposer(ComposerInterface $composer): self
     {
         $copy = clone $this;
-        $copy->update = $this->update->withUpdateQueryBuilder($builder);
+        $copy->update = $this->update->withComposer($composer);
 
         return $this->copyIsSame($copy) ? $this : $copy;
     }
@@ -189,16 +192,16 @@ class Writer implements WriteInterface
     /**
      * Get a copy with a different result builder.
      *
-     * @param ResultBuilder $builder
+     * @param ResultBuilder $composer
      * @return static
      */
-    public function withResultBuilder(ResultBuilder $builder): self
+    public function withResultBuilder(ResultBuilder $composer): self
     {
         $copy = clone $this;
 
-        $copy->save = $this->save->withResultBuilder($builder);
-        $copy->update = $this->update->withResultBuilder($builder);
-        $copy->delete = $this->delete->withResultBuilder($builder);
+        $copy->save = $this->save->withResultBuilder($composer);
+        $copy->update = $this->update->withResultBuilder($composer);
+        $copy->delete = $this->delete->withResultBuilder($composer);
 
         return $this->copyIsSame($copy) ? $this : $copy;
     }
@@ -226,7 +229,10 @@ class Writer implements WriteInterface
      */
     private function copyIsSame(self $copy): bool
     {
-        return $this->save === $copy->save && $this->update === $copy->update && $this->delete === $copy->delete;
+        return
+            $this->save === $copy->save &&
+            $this->update === $copy->update &&
+            $this->delete === $copy->delete;
     }
 
 

@@ -2,29 +2,57 @@
 
 declare(strict_types=1);
 
-namespace Jasny\DB\Mongo\Filter\Finalize;
+namespace Jasny\DB\Mongo\Query\Filter;
 
+use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Map\NoMap;
-use Jasny\DB\Mongo\Query\QueryInterface;
+use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Option\Functions as opts;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Option\SortOption;
+use Jasny\DB\Query\ComposerInterface;
 
 /**
- * Convert sort query option to a MongoDB query.
+ * Apply sort query option(s) to a MongoDB query.
+ *
+ * @implements ComposerInterface<FilterQuery,FilterItem>
  */
-class ApplySort
+class ApplySort implements ComposerInterface
 {
     /**
-     * Apply sort opt to a MongoDB query.
-     *
-     * @param QueryInterface    $query
-     * @param OptionInterface[] $opts
+     * @inheritDoc
      */
-    public function __invoke(QueryInterface $query, array $opts): void
+    public function compose(object $accumulator, iterable $items, array $opts = []): void
     {
+        $this->finalize($accumulator, $opts);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function prepare(iterable $items, array &$opts = []): iterable
+    {
+        return $items;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function apply(object $query, iterable $items, array $opts): iterable
+    {
+        return $items;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function finalize(object $query, array $opts): void
+    {
+        /** @var FilterQuery $accumulator */
+        i\type_check($query, FilterQuery::class);
+
         $sort = Pipeline::with($opts)
             ->filter(fn($opt) => $opt instanceof SortOption)
             ->map(fn(SortOption $option) => $this->convert($option->getFields(), $opts))
@@ -32,7 +60,7 @@ class ApplySort
             ->toArray();
 
         if ($sort !== []) {
-            $query->setOption('sort', $sort);
+            $query->sort($sort);
         }
     }
 

@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace Jasny\DB\Mongo\Reader;
 
+use Improved as i;
+use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Map\MapInterface;
-use Jasny\DB\Filter\Prepare\MapFilter;
 use Jasny\DB\Mongo\AbstractService;
-use Jasny\DB\Mongo\Filter\FilterComposer;
-use Jasny\DB\Mongo\Filter\Finalize\ApplyFields;
-use Jasny\DB\Mongo\Filter\Finalize\ApplyLimit;
-use Jasny\DB\Mongo\Filter\Finalize\ApplySort;
+use Jasny\DB\Mongo\Query\Filter\ApplyProjection;
+use Jasny\DB\Mongo\Query\Filter\ApplyLimit;
+use Jasny\DB\Mongo\Query\Filter\ApplySort;
+use Jasny\DB\Mongo\Query\Filter\FilterComposer;
+use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Mongo\Map\AssertMap;
 use Jasny\DB\Mongo\Model\BSONToPHP;
-use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Option\OptionInterface;
-use Jasny\DB\QueryBuilder\FilterQueryBuilder;
+use Jasny\DB\Query\ApplyMapToFilter;
+use Jasny\DB\Query\Composer;
+use Jasny\DB\Query\FilterParser;
+use Jasny\DB\Query\SetMap;
 use Jasny\DB\Reader\ReadInterface;
 use Jasny\DB\Result\Result;
 use Jasny\Immutable;
@@ -34,36 +38,56 @@ class Reader extends AbstractService implements ReadInterface
     {
         parent::__construct($map);
 
-        $this->queryBuilder = (new FilterQueryBuilder(new FilterComposer()))
-            ->withPreparation(AssertMap::asPreparation(), new MapFilter())
-            ->withFinalization(new ApplyFields(), new ApplySort(), new ApplyLimit());
+        $this->composer = new Composer(
+            new SetMap(fn(MapInterface $map) => new AssertMap($map)),
+            new FilterParser(),
+            new ApplyMapToFilter(),
+            new FilterComposer(),
+            new ApplyProjection(),
+            new ApplySort(),
+            new ApplyLimit(),
+        );
     }
 
 
     /**
      * Fetch the number of entities in the set.
      *
-     * @param array             $filter
-     * @param OptionInterface[] $opts
+     * @param array<string,mixed>|FilterItem[] $filter
+     * @param OptionInterface[]                $opts
      * @return int
      */
     public function count(array $filter = [], array $opts = []): int
     {
         $this->configureMap($opts);
 
-        $query = new FilterQuery('countDocuments');
-        $this->queryBuilder->apply($query, $filter, $opts);
+        $query = new FilterQuery();
+        $this->composer->compose($query, $filter, $opts);
 
-        $method = $query->getExpectedMethod('countDocuments', 'estimatedDocumentCount');
-        $mongoFilter = $query->toArray();
-        $mongoOptions = $query->getOptions();
+        if ($query->isAggregate()) {
+            return $this->countAggregate($query);
+        }
 
-        $this->debug("%s.$method", ['filter' => $mongoFilter, 'options' => $mongoOptions]);
+        $this->debug("%s.countDocuments", ['filter' => $query->getFilter(), 'options' => $query->getOptions()]);
 
-        return $method === 'estimatedDocumentCount'
-            ? $this->getCollection()->estimatedDocumentCount($mongoOptions)
-            : $this->getCollection()->countDocuments($mongoFilter, $mongoOptions);
+        return $this->getCollection()->countDocuments($query->getFilter(), $query->getOptions());
     }
+
+    /**
+     * Get the number of entities using an aggregation pipeline.
+     */
+    protected function countAggregate(FilterQuery $query): int
+    {
+        $query->count(); // Add $count pipeline stage
+
+        $this->debug("%s.aggregate", ['pipeline' => $query->getPipeline(), 'options' => $query->getOptions()]);
+
+        $cursor = $this->getCollection()->aggregate($query->getPipeline(), $query->getOptions());
+        $result = i\iterable_to_array($cursor, false);
+
+        return $result[0]['count'];
+    }
+
 
     /**
      * Query and fetch data.
@@ -76,24 +100,35 @@ class Reader extends AbstractService implements ReadInterface
     {
         $this->configureMap($opts);
 
-        $query = new FilterQuery('find');
-        $this->queryBuilder->apply($query, $filter, $opts);
+        $query = new FilterQuery();
+        $this->composer->compose($query, $filter, $opts);
 
-        $method = $query->getExpectedMethod('find', 'aggregate');
-        $mongoFilter = $query->toArray();
-        $mongoOptions = $query->getOptions();
-
-        $this->debug("%s.$method", [
-            ($method === 'aggregate' ? 'pipeline' : 'filter') => $mongoFilter,
-            'options' => $mongoOptions
-        ]);
-
-        $cursor = $method === 'find'
-            ? $this->getCollection()->find($mongoFilter, $mongoOptions)
-            : $this->getCollection()->aggregate($mongoFilter, $mongoOptions);
+        $cursor = $query->isAggregate()
+            ? $this->aggregate($query)
+            : $this->find($query);
 
         return $this->resultBuilder->withOpts($opts)
             ->with($cursor)
             ->map(new BSONToPHP());
+    }
+
+    /**
+     * Execute a MongoDB aggregate command.
+     */
+    protected function aggregate(FilterQuery $query): \Traversable
+    {
+        $this->debug("%s.aggregate", ['pipeline' => $query->getPipeline(), 'options' => $query->getOptions()]);
+
+        return $this->getCollection()->aggregate($query->getPipeline(), $query->getOptions());
+    }
+
+    /**
+     * Execute a MongoDB find command.
+     */
+    protected function find(FilterQuery $query): \Traversable
+    {
+        $this->debug("%s.find", ['filter' => $query->getFilter(), 'options' => $query->getOptions(true)]);
+
+        return $this->getCollection()->find($query->getFilter(), $query->getOptions(true));
     }
 }

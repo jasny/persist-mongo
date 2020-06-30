@@ -10,7 +10,7 @@ use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Mongo\Map\Vermongo;
 use Jasny\DB\Mongo\Save\SaveComposer;
 use Jasny\DB\Mongo\Reader\Reader;
-use Jasny\DB\Mongo\Writer\Finalize\ConflictResolution;
+use Jasny\DB\Mongo\Writer\Finalize\DetermineMethod;
 use Jasny\DB\Mongo\Writer\Writer;
 use Jasny\DB\Option\Functions as opts;
 use Jasny\DB\QueryBuilder\SaveQueryBuilder;
@@ -54,7 +54,7 @@ class VermongoTest extends TestCase
                 }),
                 new MapItems(),
             )
-            ->withFinalization(new ConflictResolution());
+            ->withFinalization(new DetermineMethod());
 
         return (new Writer($map))->withSaveQueryBuilder($saveQueryBuilder);
     }
