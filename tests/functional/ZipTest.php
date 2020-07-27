@@ -56,14 +56,21 @@ class ZipTest extends TestCase
             $this->cloneCollection(); // Only clone if data is changed as cloning slows down the tests.
         }
 
-        $this->logger = getenv('JASNY_DB_TESTS_DEBUG') === 'on' || true
+        $this->logger = getenv('JASNY_DB_TESTS_DEBUG') === 'on'
             ? new Logger('MongoDB', [new StreamHandler(STDERR)])
             : new Logger('MongoDB', [new NullHandler()]);
 
         $map = new FieldMap(['id' => '_id']);
 
-        $this->reader = (new Reader($map))->forCollection($this->collection)->withLogging($this->logger);
-        $this->writer = (new Writer($map))->forCollection($this->collection)->withLogging($this->logger);
+        $this->reader = (new Reader())
+            ->for($this->collection)
+            ->withMap($map)
+            ->withLogging($this->logger);
+
+        $this->writer = (new Writer())
+            ->for($this->collection)
+            ->withMap($map)
+            ->withLogging($this->logger);
     }
 
     public function tearDown(): void
@@ -76,7 +83,7 @@ class ZipTest extends TestCase
     protected function cloneCollection(): void
     {
         $name = $this->collection->getCollectionName() . '_copy';
-        $this->collection->aggregate([['$match' => (object)[]], ['$out' => $name]]);
+        $this->collection->aggregate([['$out' => $name]]);
 
         $this->collection = $this->db->selectCollection($name, ['typeMap' => $this->collection->getTypeMap()]);
     }
@@ -113,7 +120,9 @@ class ZipTest extends TestCase
 
         $result = $this->reader->fetch(
             ['state' => "NY"],
-            [opts\limit(5), opts\sort('id'), opts\fields('id', 'city')]
+            opts\limit(5),
+            opts\sort('id'),
+            opts\fields('id', 'city'),
         );
 
         $locations = i\iterable_to_array($result);
@@ -147,7 +156,7 @@ class ZipTest extends TestCase
         $filter = ['loc(near)' => [-72.622739, 42.070206]];
 
         $this->assertEquals(445, $this->reader->count($filter));
-        $this->assertEquals(14, $this->reader->count($filter, [opts\setting('near', 0.1)]));
+        $this->assertEquals(14, $this->reader->count($filter, opts\setting('near', 0.1)));
     }
 
     public function testFetchWithCustomFieldMap()
@@ -166,11 +175,13 @@ class ZipTest extends TestCase
             'area' => 'state',
         ]);
 
-        $this->reader = (new Reader($map))->forCollection($this->collection)->withLogging($this->logger);
+        $this->reader = (new Reader())->withMap($map)->for($this->collection)->withLogging($this->logger);
 
         $result = $this->reader->fetch(
             ['area' => "NY"],
-            [opts\limit(5), opts\sort('zipcode'), opts\omit('area', 'loc', 'pop')]
+            opts\limit(5),
+            opts\sort('zipcode'),
+            opts\omit('area', 'loc', 'pop'),
         );
 
         $locations = i\iterable_to_array($result);
@@ -207,7 +218,7 @@ class ZipTest extends TestCase
             '2'  => (object)["city" => "BLUE HILLS", "loc" => [-118.407, 34.0], "pop" => 99, "state" => "CA"],
         ];
 
-        $result = $this->writer->saveAll($locations, [opts\apply_result()]);
+        $result = $this->writer->saveAll($locations, opts\apply_result());
 
         foreach ($result as $key => $location) {
             $this->assertArrayHasKey($key, $locations);
@@ -232,8 +243,9 @@ class ZipTest extends TestCase
             'area' => 'state'
         ]);
 
-        $this->writer = (new Writer($map))
-            ->forCollection($this->collection)
+        $this->writer = (new Writer())
+            ->withMap($map)
+            ->for($this->collection)
             ->withLogging($this->logger);
 
         $locations = [
@@ -251,7 +263,7 @@ class ZipTest extends TestCase
             ],
         ];
 
-        $result = $this->writer->saveAll($locations, [opts\apply_result()]);
+        $result = $this->writer->saveAll($locations, opts\apply_result());
 
         foreach ($result as $key => $location) {
             $this->assertArrayHasKey($key, $locations);
@@ -319,7 +331,7 @@ class ZipTest extends TestCase
         $result = $this->writer->update(
             ['loc(near)' => [-72.622739, 42.070206]],
             update\set(["state" => "AD"]),
-            [opts\setting('near', 0.1)]
+            opts\setting('near', 0.1),
         );
 
         $this->assertEquals(14, $result->getMeta('count'));
@@ -334,7 +346,7 @@ class ZipTest extends TestCase
         $result = $this->writer->update(
             ["city" => "NEW YORK"],
             update\set(["city" => "NEW YORK CITY"]),
-            [opts\limit(1)]
+            opts\limit(1),
         );
 
         $this->assertEquals(1, $result->getMeta('count'));
@@ -365,7 +377,7 @@ class ZipTest extends TestCase
 
         $result = $this->writer->delete(
             ['loc(near)' => [-72.622739, 42.070206]],
-            [opts\setting('near', 0.1)]
+            opts\setting('near', 0.1),
         );
 
         $this->assertEquals(14, $result->getMeta('count'));
@@ -386,7 +398,7 @@ class ZipTest extends TestCase
                 $this->reader->getComposer(),
             );
 
-        $result = $this->reader->fetch(['totalPop(min)' => 10*1000*1000], [opts\sort('~totalPop')]);
+        $result = $this->reader->fetch(['totalPop(min)' => 10*1000*1000], opts\sort('~totalPop'));
 
         $expected = [
             ["state" => "CA", "totalPop" => 29754890],
@@ -429,14 +441,12 @@ class ZipTest extends TestCase
                 $this->reader->getComposer(),
             );
 
-        $result = $this->reader->fetch(['state' => 'WA']);
+        $result = $this->reader->fetch(['state' => 'WA'])->first();
 
         $expected = [
-            [
-                'state' => "WA",
-                'biggestCity' => ['name' => "SEATTLE", 'pop' => 520096],
-                'smallestCity' => ['name' => 'BENGE', 'pop' => 2],
-            ],
+            'state' => "WA",
+            'biggestCity' => ['name' => "SEATTLE", 'pop' => 520096],
+            'smallestCity' => ['name' => 'BENGE', 'pop' => 2],
         ];
 
         $this->assertEquals($expected, i\iterable_to_array($result));

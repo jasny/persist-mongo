@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Writer;
 
 use Jasny\DB\Map\MapInterface;
+use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Query\Composer;
 use Jasny\DB\Query\ComposerInterface;
 use Jasny\DB\Result\Result;
@@ -15,7 +16,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Fetch data from a MongoDB collection.
+ * Service to write to a MongoDB collection.
+ * Compound class for update, save, and delete.
  */
 class Writer implements WriteInterface
 {
@@ -26,17 +28,25 @@ class Writer implements WriteInterface
     /**
      * Class constructor.
      */
-    public function __construct(?MapInterface $map = null)
+    public function __construct()
     {
         $logger = new NullLogger();
 
-        $this->save = (new Save($map))->withLogging($logger);
-        $map = $this->save->getMap(); // Use same map as save for update and delete
+        $this->save = (new Save())->withLogging($logger);
 
-        $this->update = (new Update($map))->withLogging($logger);
+        // Use same map and result builder as save for update and delete
+        $map = $this->save->getMap();
+        $resultBuilder = $this->save->getResultBuilder();
 
-        $this->delete = (new Delete($map))
+        $this->update = (new Update())
+            ->withMap($map)
+            ->withResultBuilder($resultBuilder)
+            ->withLogging($logger);
+
+        $this->delete = (new Delete())
+            ->withMap($map)
             ->withComposer($this->update->getComposer())
+            ->withResultBuilder($resultBuilder)
             ->withLogging($logger);
     }
 
@@ -69,13 +79,13 @@ class Writer implements WriteInterface
      * @param Collection $collection
      * @return static
      */
-    public function forCollection(Collection $collection): self
+    public function for(Collection $collection): self
     {
         $copy = clone $this;
 
-        $copy->save = $this->save->forCollection($collection);
-        $copy->update = $this->update->forCollection($collection);
-        $copy->delete = $this->delete->forCollection($collection);
+        $copy->save = $this->save->for($collection);
+        $copy->update = $this->update->for($collection);
+        $copy->delete = $this->delete->for($collection);
 
         return $this->copyIsSame($copy) ? $this : $copy;
     }
@@ -109,11 +119,11 @@ class Writer implements WriteInterface
 
 
     /**
-     * Get the query builder used by this service.
+     * Get the query composer used by this service.
      */
     public function getComposer(): ComposerInterface
     {
-        // Update and delete use the same collection, so could return the query builder of any of both.
+        // Update and delete use the same collection, so could return the query composer of any of both.
         return $this->update->getComposer();
     }
 
@@ -136,7 +146,7 @@ class Writer implements WriteInterface
     }
 
     /**
-     * Get the query builder used by this service for save queries.
+     * Get the query composer used by this service for save queries.
      */
     public function getSaveComposer(): ComposerInterface
     {
@@ -144,9 +154,9 @@ class Writer implements WriteInterface
     }
 
     /**
-     * Get a copy with a different query builder for save .
+     * Get a copy with a different query composer for save.
      *
-     * @param ComposerInterface $composer  Save query builder
+     * @param ComposerInterface $composer  Save query composer
      * @return static
      */
     public function withSaveComposer(ComposerInterface $composer): self
@@ -158,17 +168,17 @@ class Writer implements WriteInterface
     }
 
     /**
-     * Get the query builder used by this service for update queries.
+     * Get the query composer used by this service for update queries.
      */
-    public function getUpdateQueryBuilder(): ComposerInterface
+    public function getUpdateComposer(): ComposerInterface
     {
         return $this->update->getComposer();
     }
 
     /**
-     * Get a copy with a different query builder for update.
+     * Get a copy with a different query composer for update.
      *
-     * @param ComposerInterface $composer  Update query builder
+     * @param ComposerInterface $composer  Update query composer
      * @return static
      */
     public function withUpdateComposer(ComposerInterface $composer): self
@@ -239,32 +249,32 @@ class Writer implements WriteInterface
     /**
      * @inheritDoc
      */
-    public function save($item, array $opts = []): Result
+    public function save($item, OptionInterface ...$opts): Result
     {
-        return $this->save->save($item, $opts);
+        return $this->save->save($item, ...$opts);
     }
 
     /**
      * @inheritDoc
      */
-    public function saveAll(iterable $items, array $opts = []): Result
+    public function saveAll(iterable $items, OptionInterface ...$opts): Result
     {
-        return $this->save->saveAll($items, $opts);
+        return $this->save->saveAll($items, ...$opts);
     }
 
     /**
      * @inheritDoc
      */
-    public function update(array $filter, $instructions, array $opts = []): Result
+    public function update(array $filter, $instructions, OptionInterface ...$opts): Result
     {
-        return $this->update->update($filter, $instructions, $opts);
+        return $this->update->update($filter, $instructions, ...$opts);
     }
 
     /**
      * @inheritDoc
      */
-    public function delete(array $filter, array $opts = []): Result
+    public function delete(array $filter, OptionInterface ...$opts): Result
     {
-        return $this->delete->delete($filter, $opts);
+        return $this->delete->delete($filter, ...$opts);
     }
 }

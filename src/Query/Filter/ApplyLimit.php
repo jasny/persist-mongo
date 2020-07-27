@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Query\Filter;
 
 use Improved as i;
-use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Option\LimitOption;
 use Jasny\DB\Query\ComposerInterface;
@@ -47,19 +46,21 @@ class ApplyLimit implements ComposerInterface
      */
     public function finalize(object $query, array $opts): void
     {
-        /** @var FilterQuery $accumulator */
-        i\type_check($query, FilterQuery::class);
+        /** @var LimitOption|null $opt */
+        $opt = i\iterable_find(array_reverse($opts), fn($opt) => $opt instanceof LimitOption);
 
-        /** @var LimitOption|null $limitOpt */
-        $limitOpt = Pipeline::with($opts)
-            ->filter(fn($opt) => $opt instanceof LimitOption)
-            ->last();
-
-        if ($limitOpt === null) {
+        if ($opt === null) {
             return;
         }
 
-        $query->limit($limitOpt->getLimit());
-        $query->skip($limitOpt->getOffset());
+        /** @var FilterQuery $accumulator */
+        i\type_check($query, FilterQuery::class);
+
+        if ($opt->getLimit() !== 0) {
+            $query->limit($opt->getLimit());
+        }
+        if ($opt->getOffset() !== 0) {
+            $query->skip($opt->getOffset());
+        }
     }
 }

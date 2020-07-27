@@ -46,9 +46,9 @@ class Update extends AbstractService implements WriteInterface
     /**
      * Class constructor.
      */
-    public function __construct(?MapInterface $map = null)
+    public function __construct()
     {
-        parent::__construct($map);
+        parent::__construct();
 
         $this->composer = new Composer(
             new FilterParser(),
@@ -90,16 +90,16 @@ class Update extends AbstractService implements WriteInterface
      *
      * @param array<string,mixed>|FilterItem[]              $filter
      * @param UpdateInstruction|iterable<UpdateInstruction> $update
-     * @param OptionInterface[]                             $opts
+     * @param OptionInterface                               ...$opts
      * @return Result
      */
-    public function update(array $filter, $update, array $opts = []): Result
+    public function update(array $filter, $update, OptionInterface ...$opts): Result
     {
         if ($update instanceof UpdateInstruction) {
             $update = [$update];
         }
 
-        $this->configureMap($opts);
+        $this->configure($opts);
 
         $filterQuery = new FilterQuery();
         $updateQuery = new UpdateQuery($filterQuery);
@@ -119,7 +119,7 @@ class Update extends AbstractService implements WriteInterface
         $writeResult = $this->getCollection()->{$method}(
             $filterQuery->getFilter(),
             $updateQuery->getUpdate(),
-            $updateQuery->getOptions()
+            $updateQuery->getOptions(),
         );
 
         return $this->createUpdateResult($writeResult, $opts);
@@ -155,7 +155,7 @@ class Update extends AbstractService implements WriteInterface
     /**
      * @inheritDoc
      */
-    public function save($item, array $opts = []): Result
+    public function save($item, OptionInterface ...$opts): Result
     {
         throw new UnsupportedFeatureException("Update only writer; save is not supported");
     }
@@ -163,7 +163,7 @@ class Update extends AbstractService implements WriteInterface
     /**
      * @inheritDoc
      */
-    public function saveAll(iterable $items, array $opts = []): Result
+    public function saveAll(iterable $items, OptionInterface ...$opts): Result
     {
         throw new UnsupportedFeatureException("Update only writer; save is not supported");
     }
@@ -171,7 +171,7 @@ class Update extends AbstractService implements WriteInterface
     /**
      * @inheritDoc
      */
-    public function delete(array $filter, array $opts = []): Result
+    public function delete(array $filter, OptionInterface ...$opts): Result
     {
         throw new UnsupportedFeatureException("Update only writer; delete is not supported");
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo;
 
 use Improved as i;
+use Jasny\DB\Option\OptionInterface;
 
 /**
  * Flatten all fields of an element.
@@ -29,4 +30,25 @@ function flatten_fields($element, string $path = '', array &$accumulator = []): 
     }
 
     return $accumulator;
+}
+
+/**
+ * Extract all opts of the given class.
+ *
+ * @param OptionInterface[] $opts
+ * @param string            $class
+ * @return OptionInterface[]
+ */
+function extract_opts(array &$opts, string $class): array
+{
+    $found = [];
+
+    foreach ($opts as $i => $opt) {
+        if (is_a($opt, $class)) {
+            $found[] = $opt;
+            unset($opts[$i]);
+        }
+    }
+
+    return $found;
 }

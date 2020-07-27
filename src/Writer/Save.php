@@ -12,6 +12,7 @@ use Jasny\DB\Mongo\Map\AssertMap;
 use Jasny\DB\Mongo\Query\Save\SaveComposer;
 use Jasny\DB\Mongo\Query\WriteQuery;
 use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Query\ApplyMapToItems;
 use Jasny\DB\Query\Composer;
 use Jasny\DB\Query\SetMap;
@@ -31,9 +32,9 @@ class Save extends AbstractService implements WriteInterface
     /**
      * Class constructor.
      */
-    public function __construct(?MapInterface $map = null)
+    public function __construct()
     {
-        parent::__construct($map);
+        parent::__construct();
 
         $this->composer = new Composer(
             new SetMap(fn(MapInterface $map) => new AssertMap($map)),
@@ -46,7 +47,7 @@ class Save extends AbstractService implements WriteInterface
     /**
      * @inheritDoc
      */
-    public function save($item, array $opts = []): Result
+    public function save($item, OptionInterface ...$opts): Result
     {
         return $this->saveAll([$item], $opts);
     }
@@ -54,9 +55,9 @@ class Save extends AbstractService implements WriteInterface
     /**
      * @inheritDoc
      */
-    public function saveAll(iterable $items, array $opts = []): Result
+    public function saveAll(iterable $items, OptionInterface ...$opts): Result
     {
-        $this->configureMap($opts);
+        $this->configure($opts);
 
         $applyResult = opts\apply_result()->isIn($opts);
         $items = $applyResult ? i\iterable_to_array($items) : $items;
@@ -83,9 +84,9 @@ class Save extends AbstractService implements WriteInterface
     /**
      * Aggregate the meta from multiple bulk write actions.
      *
-     * @param array             $index
+     * @param array<int|string> $index
      * @param BulkWriteResult   $writeResult
-     * @return Result<\stdClass>
+     * @return Result
      */
     protected function createSaveResult(array $index, BulkWriteResult $writeResult, array $opts): Result
     {
@@ -117,7 +118,7 @@ class Save extends AbstractService implements WriteInterface
      * @inheritDoc
      * @throws UnsupportedFeatureException
      */
-    public function update(array $filter, $instructions, array $opts = []): Result
+    public function update(array $filter, $instructions, OptionInterface ...$opts): Result
     {
         throw new UnsupportedFeatureException("Save only writer; update is not supported");
     }
@@ -126,7 +127,7 @@ class Save extends AbstractService implements WriteInterface
      * @inheritDoc
      * @throws UnsupportedFeatureException
      */
-    public function delete(array $filter, array $opts = []): Result
+    public function delete(array $filter, OptionInterface ...$opts): Result
     {
         throw new UnsupportedFeatureException("Save only writer; delete is not supported");
     }

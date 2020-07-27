@@ -38,33 +38,6 @@ class ApplySort implements ComposerInterface
     }
 
     /**
-     * @inheritDoc
-     */
-    public function apply(object $query, iterable $items, array $opts): iterable
-    {
-        return $items;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function finalize(object $query, array $opts): void
-    {
-        /** @var FilterQuery $accumulator */
-        i\type_check($query, FilterQuery::class);
-
-        $sort = Pipeline::with($opts)
-            ->filter(fn($opt) => $opt instanceof SortOption)
-            ->map(fn(SortOption $option) => $this->convert($option->getFields(), $opts))
-            ->flatten(true)
-            ->toArray();
-
-        if ($sort !== []) {
-            $query->sort($sort);
-        }
-    }
-
-    /**
      * Convert sort opt to MongoDB sort option.
      *
      * @param string[]          $fields
@@ -83,5 +56,34 @@ class ApplySort implements ComposerInterface
             ->mapKeys(fn(int $asc, string $field) => ($asc < 0 ? substr($field, 1) : $field))
             ->mapKeys(fn($_, string $field) => $map->applyToField($field) ?? $field)
             ->toArray();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function apply(object $query, iterable $items, array $opts): iterable
+    {
+        return $items;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function finalize(object $query, array $opts): void
+    {
+        $sort = Pipeline::with($opts)
+            ->filter(fn($opt) => $opt instanceof SortOption)
+            ->map(fn(SortOption $option) => $this->convert($option->getFields(), $opts))
+            ->flatten(true)
+            ->toArray();
+
+        if ($sort === []) {
+            return;
+        }
+
+        /** @var FilterQuery $accumulator */
+        i\type_check($query, FilterQuery::class);
+
+        $query->sort($sort);
     }
 }

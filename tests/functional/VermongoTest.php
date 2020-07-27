@@ -74,11 +74,11 @@ class VermongoTest extends TestCase
         $map = new FieldMap(['_id' => 'id', '_version' => 'version']);
         $vermongoMap = new Vermongo($map);
 
-        $baseWriter = $this->createBaseWriter($map)->forCollection($this->collection);
-        $vermongoWriter = (new Writer($vermongoMap))->forCollection($this->vermongo);
+        $baseWriter = $this->createBaseWriter($map)->for($this->collection);
+        $vermongoWriter = (new Writer($vermongoMap))->for($this->vermongo);
 
         $this->writer = (new MultiWrite($baseWriter, $vermongoWriter))->withLogging($this->logger);
-        $this->reader = (new Reader($vermongoMap))->forCollection($this->vermongo)->withLogging($this->logger);
+        $this->reader = (new Reader($vermongoMap))->for($this->vermongo)->withLogging($this->logger);
     }
 
     public function tearDown(): void

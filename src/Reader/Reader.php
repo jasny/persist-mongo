@@ -8,6 +8,8 @@ use Improved as i;
 use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Mongo\AbstractService;
+use Jasny\DB\Mongo\Query\Filter\ApplyHydrate;
+use Jasny\DB\Mongo\Query\Filter\ApplyLookup;
 use Jasny\DB\Mongo\Query\Filter\ApplyProjection;
 use Jasny\DB\Mongo\Query\Filter\ApplyLimit;
 use Jasny\DB\Mongo\Query\Filter\ApplySort;
@@ -23,6 +25,8 @@ use Jasny\DB\Query\SetMap;
 use Jasny\DB\Reader\ReadInterface;
 use Jasny\DB\Result\Result;
 use Jasny\Immutable;
+use MongoDB\Collection;
+use MongoDB\Database;
 
 /**
  * Fetch data from a MongoDB collection
@@ -33,15 +37,19 @@ class Reader extends AbstractService implements ReadInterface
 
     /**
      * Reader constructor.
+     *
+     * @param Database|Collection|null $storage
      */
-    public function __construct(?MapInterface $map = null)
+    public function __construct($storage)
     {
-        parent::__construct($map);
+        parent::__construct($storage);
 
         $this->composer = new Composer(
             new SetMap(fn(MapInterface $map) => new AssertMap($map)),
             new FilterParser(),
             new ApplyMapToFilter(),
+            new ApplyHydrate(),
+            new ApplyLookup(),
             new FilterComposer(),
             new ApplyProjection(),
             new ApplySort(),
@@ -54,12 +62,12 @@ class Reader extends AbstractService implements ReadInterface
      * Fetch the number of entities in the set.
      *
      * @param array<string,mixed>|FilterItem[] $filter
-     * @param OptionInterface[]                $opts
+     * @param OptionInterface                  ...$opts
      * @return int
      */
-    public function count(array $filter = [], array $opts = []): int
+    public function count(array $filter = [], OptionInterface ...$opts): int
     {
-        $this->configureMap($opts);
+        $this->configure($opts);
 
         $query = new FilterQuery();
         $this->composer->compose($query, $filter, $opts);
@@ -92,13 +100,13 @@ class Reader extends AbstractService implements ReadInterface
     /**
      * Query and fetch data.
      *
-     * @param array             $filter
-     * @param OptionInterface[] $opts
+     * @param array           $filter
+     * @param OptionInterface ...$opts
      * @return Result
      */
-    public function fetch(array $filter = [], array $opts = []): Result
+    public function fetch(array $filter = [], OptionInterface ...$opts): Result
     {
-        $this->configureMap($opts);
+        $this->configure($opts);
 
         $query = new FilterQuery();
         $this->composer->compose($query, $filter, $opts);
