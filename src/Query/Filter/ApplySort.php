@@ -9,7 +9,7 @@ use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Map\NoMap;
 use Jasny\DB\Mongo\Query\FilterQuery;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Option\SortOption;
 use Jasny\DB\Query\ComposerInterface;
@@ -47,7 +47,7 @@ class ApplySort implements ComposerInterface
     protected function convert(array $fields, array $opts): array
     {
         /** @var MapInterface $map */
-        $map = opts\setting('map', new NoMap())->findIn($opts, MapInterface::class);
+        $map = opt\setting('map', new NoMap())->findIn($opts, MapInterface::class);
 
         return Pipeline::with($fields)
             ->typeCheck('string', new \UnexpectedValueException())

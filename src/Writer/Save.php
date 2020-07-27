@@ -11,7 +11,7 @@ use Jasny\DB\Mongo\AbstractService;
 use Jasny\DB\Mongo\Map\AssertMap;
 use Jasny\DB\Mongo\Query\Save\SaveComposer;
 use Jasny\DB\Mongo\Query\WriteQuery;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Query\ApplyMapToItems;
 use Jasny\DB\Query\Composer;
@@ -59,7 +59,7 @@ class Save extends AbstractService implements WriteInterface
     {
         $this->configure($opts);
 
-        $applyResult = opts\apply_result()->isIn($opts);
+        $applyResult = opt\apply_result()->isIn($opts);
         $items = $applyResult ? i\iterable_to_array($items) : $items;
 
         $query = new WriteQuery(['ordered' => false]);

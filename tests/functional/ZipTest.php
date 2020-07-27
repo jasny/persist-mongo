@@ -11,7 +11,7 @@ use Jasny\DB\Mongo\Query\Filter\PipelineStage;
 use Jasny\DB\Mongo\Query\FilterQuery;
 use Jasny\DB\Mongo\Reader\Reader;
 use Jasny\DB\Mongo\Writer\Writer;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Query\CustomOperator;
 use Jasny\DB\Update\Functions as update;
 use MongoDB\BSON\ObjectId;
@@ -120,9 +120,9 @@ class ZipTest extends TestCase
 
         $result = $this->reader->fetch(
             ['state' => "NY"],
-            opts\limit(5),
-            opts\sort('id'),
-            opts\fields('id', 'city'),
+            opt\limit(5),
+            opt\sort('id'),
+            opt\fields('id', 'city'),
         );
 
         $locations = i\iterable_to_array($result);
@@ -145,7 +145,7 @@ class ZipTest extends TestCase
                 'near',
                 static function (FilterQuery $query, FilterItem $filter, array $opts) {
                     [$field, $value] = [$filter->getField(), $filter->getValue()];
-                    $dist = opts\setting('near', 1.0)->findIn($opts);
+                    $dist = opt\setting('near', 1.0)->findIn($opts);
 
                     $query->match([$field => ['$geoWithin' => ['$center' => [$value, $dist]]]]);
                 }
@@ -156,7 +156,7 @@ class ZipTest extends TestCase
         $filter = ['loc(near)' => [-72.622739, 42.070206]];
 
         $this->assertEquals(445, $this->reader->count($filter));
-        $this->assertEquals(14, $this->reader->count($filter, opts\setting('near', 0.1)));
+        $this->assertEquals(14, $this->reader->count($filter, opt\setting('near', 0.1)));
     }
 
     public function testFetchWithCustomFieldMap()
@@ -179,9 +179,9 @@ class ZipTest extends TestCase
 
         $result = $this->reader->fetch(
             ['area' => "NY"],
-            opts\limit(5),
-            opts\sort('zipcode'),
-            opts\omit('area', 'loc', 'pop'),
+            opt\limit(5),
+            opt\sort('zipcode'),
+            opt\omit('area', 'loc', 'pop'),
         );
 
         $locations = i\iterable_to_array($result);
@@ -218,7 +218,7 @@ class ZipTest extends TestCase
             '2'  => (object)["city" => "BLUE HILLS", "loc" => [-118.407, 34.0], "pop" => 99, "state" => "CA"],
         ];
 
-        $result = $this->writer->saveAll($locations, opts\apply_result());
+        $result = $this->writer->saveAll($locations, opt\apply_result());
 
         foreach ($result as $key => $location) {
             $this->assertArrayHasKey($key, $locations);
@@ -263,7 +263,7 @@ class ZipTest extends TestCase
             ],
         ];
 
-        $result = $this->writer->saveAll($locations, opts\apply_result());
+        $result = $this->writer->saveAll($locations, opt\apply_result());
 
         foreach ($result as $key => $location) {
             $this->assertArrayHasKey($key, $locations);
@@ -312,7 +312,7 @@ class ZipTest extends TestCase
                 'near',
                 static function (FilterQuery $query, FilterItem $filter, array $opts) {
                     [$field, $value] = [$filter->getField(), $filter->getValue()];
-                    $dist = opts\setting('near', 1.0)->findIn($opts);
+                    $dist = opt\setting('near', 1.0)->findIn($opts);
 
                     $query->match([$field => ['$geoWithin' => ['$center' => [$value, $dist]]]]);
                 }
@@ -331,7 +331,7 @@ class ZipTest extends TestCase
         $result = $this->writer->update(
             ['loc(near)' => [-72.622739, 42.070206]],
             update\set(["state" => "AD"]),
-            opts\setting('near', 0.1),
+            opt\setting('near', 0.1),
         );
 
         $this->assertEquals(14, $result->getMeta('count'));
@@ -346,7 +346,7 @@ class ZipTest extends TestCase
         $result = $this->writer->update(
             ["city" => "NEW YORK"],
             update\set(["city" => "NEW YORK CITY"]),
-            opts\limit(1),
+            opt\limit(1),
         );
 
         $this->assertEquals(1, $result->getMeta('count'));
@@ -377,7 +377,7 @@ class ZipTest extends TestCase
 
         $result = $this->writer->delete(
             ['loc(near)' => [-72.622739, 42.070206]],
-            opts\setting('near', 0.1),
+            opt\setting('near', 0.1),
         );
 
         $this->assertEquals(14, $result->getMeta('count'));
@@ -398,7 +398,7 @@ class ZipTest extends TestCase
                 $this->reader->getComposer(),
             );
 
-        $result = $this->reader->fetch(['totalPop(min)' => 10*1000*1000], opts\sort('~totalPop'));
+        $result = $this->reader->fetch(['totalPop(min)' => 10*1000*1000], opt\sort('~totalPop'));
 
         $expected = [
             ["state" => "CA", "totalPop" => 29754890],

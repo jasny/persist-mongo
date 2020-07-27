@@ -8,7 +8,7 @@ use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Mongo\Query\FilterQuery;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\LookupOption;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Query\ApplyMapToFilter;
@@ -123,9 +123,9 @@ class ApplyLookup implements ComposerInterface
         $match = $relationship->getMatch();
 
         $subOpts = array_merge([
-            opts\setting('schema', $schema),
-            opts\setting('collection', $related),
-            opts\setting('map', $schema->map($related)),
+            opt\setting('schema', $schema),
+            opt\setting('collection', $related),
+            opt\setting('map', $schema->map($related)),
         ], $opt->getOpts());
 
         $let = $this->calcLookupLet($match);

@@ -7,7 +7,7 @@ namespace Jasny\DB\Mongo\Tests\Map;
 use ArrayIterator;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Mongo\Map\AssertMap;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\OptionInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -152,7 +152,7 @@ class AssertMapTest extends TestCase
 
         $opts = [
             $this->createMock(OptionInterface::class),
-            opts\setting('map', $map),
+            opt\setting('map', $map),
         ];
 
         $result = $prepare($items, $opts);
@@ -162,7 +162,7 @@ class AssertMapTest extends TestCase
         $this->assertIsArray($opts);
         $this->assertCount(2, $opts);
 
-        $optsMap = opts\setting('map', null)->findIn($opts);
+        $optsMap = opt\setting('map', null)->findIn($opts);
 
         $this->assertInstanceOf(AssertMap::class, $optsMap);
         $this->assertSame($map, $optsMap->getInner());

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Query\Update;
 
 use Jasny\DB\Mongo\Query\WriteQuery;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\OptionInterface;
 use function Jasny\DB\Mongo\flatten_fields;
 
@@ -22,7 +22,7 @@ class DetermineMethod
      */
     public function __invoke(WriteQuery $query, array $opts): void
     {
-        $resolution = opts\setting('existing', null)->findIn($opts);
+        $resolution = opt\setting('existing', null)->findIn($opts);
 
         if ($resolution === null) {
             return;

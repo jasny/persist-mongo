@@ -12,7 +12,7 @@ use Jasny\DB\Mongo\Save\SaveComposer;
 use Jasny\DB\Mongo\Reader\Reader;
 use Jasny\DB\Mongo\Writer\Finalize\DetermineMethod;
 use Jasny\DB\Mongo\Writer\Writer;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\QueryBuilder\SaveQueryBuilder;
 use Jasny\DB\Save\Prepare\MapItems;
 use Jasny\DB\Writer\MultiWrite;
@@ -95,7 +95,7 @@ class VermongoTest extends TestCase
     {
         $item = (object)['name' => 'john'];
 
-        $result = $this->writer->save($item, [opts\apply_result()]);
+        $result = $this->writer->save($item, [opt\apply_result()]);
         $record = $result->first();
 
         $this->assertIsObject($record);

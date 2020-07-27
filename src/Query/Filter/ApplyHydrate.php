@@ -7,7 +7,7 @@ namespace Jasny\DB\Mongo\Query\Filter;
 use Improved as i;
 use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Mongo\Query\FilterQuery;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\HydrateOption;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Query\ComposerInterface;
@@ -32,7 +32,7 @@ class ApplyHydrate implements ComposerInterface
      */
     protected function getCollectionSetting(array $opts): string
     {
-        $collection = opts\setting('collection', null)->findIn($opts);
+        $collection = opt\setting('collection', null)->findIn($opts);
 
         if ($collection === null) {
             throw new \LogicException("Failed to apply hydrate option; missing 'collection' setting");
@@ -49,7 +49,7 @@ class ApplyHydrate implements ComposerInterface
      */
     protected function getSchemaSetting(array $opts): SchemaInterface
     {
-        $schema = opts\setting('schema', null)->findIn($opts, SchemaInterface::class);
+        $schema = opt\setting('schema', null)->findIn($opts, SchemaInterface::class);
 
         if ($schema === null) {
             throw new \LogicException("Failed to apply hydrate option; no schema configured");

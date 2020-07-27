@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo\Query\Filter;
 
 use Improved\IteratorPipeline\Pipeline;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Schema\SchemaInterface;
 
@@ -22,7 +22,7 @@ trait LookupTrait
      */
     protected function getCollectionSetting(array $opts): string
     {
-        $collection = opts\setting('collection', null)->findIn($opts);
+        $collection = opt\setting('collection', null)->findIn($opts);
 
         if ($collection === null) {
             $type = strtolower(str_replace('Apply', '', get_class($this)));
@@ -40,7 +40,7 @@ trait LookupTrait
      */
     protected function getSchemaSetting(array $opts): SchemaInterface
     {
-        $schema = opts\setting('schema', null)->findIn($opts, SchemaInterface::class);
+        $schema = opt\setting('schema', null)->findIn($opts, SchemaInterface::class);
 
         if ($schema === null) {
             $type = strtolower(str_replace('Apply', '', get_class($this)));

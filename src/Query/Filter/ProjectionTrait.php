@@ -9,7 +9,7 @@ use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Map\NoMap;
 use Jasny\DB\Option\FieldsOption;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\OptionInterface;
 
 /**
@@ -53,7 +53,7 @@ trait ProjectionTrait
      */
     protected function project(array $fields, bool $negate, array $opts): iterable
     {
-        $map = opts\setting('map', new NoMap())->findIn($opts, MapInterface::class);
+        $map = opt\setting('map', new NoMap())->findIn($opts, MapInterface::class);
 
         return Pipeline::with($fields)
             ->typeCheck('string', new \UnexpectedValueException())

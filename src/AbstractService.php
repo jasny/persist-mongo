@@ -9,7 +9,7 @@ use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Map\NoMap;
 use Jasny\DB\Mongo\Model\BSONToPHP;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Option\SettingOption;
 use Jasny\DB\Query\Composer;
@@ -219,8 +219,8 @@ abstract class AbstractService
 
         array_unshift(
             $opts,
-            opts\setting('schema', $this->schema),
-            opts\setting('collection', $this->collection->getCollectionName()),
+            opt\setting('schema', $this->schema),
+            opt\setting('collection', $this->collection->getCollectionName()),
         );
     }
 
@@ -231,13 +231,13 @@ abstract class AbstractService
      */
     private function configureMap(array &$opts): void
     {
-        $map = opts\setting('map', $this->getMap())->findIn($opts, MapInterface::class);
+        $map = opt\setting('map', $this->getMap())->findIn($opts, MapInterface::class);
 
         $opts = Pipeline::with($opts)
             ->filter(fn($opt) => !($opt instanceof SettingOption) || $opt->getName() !== 'map')
             ->toArray();
 
-        $opts[] = opts\setting('map', $map->withOpts($opts));
+        $opts[] = opt\setting('map', $map->withOpts($opts));
     }
 
 

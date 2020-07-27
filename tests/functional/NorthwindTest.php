@@ -7,7 +7,7 @@ namespace Jasny\DB\Mongo\Tests\Functional;
 use Improved as i;
 use Jasny\DB\Mongo\Reader\Reader;
 use Jasny\DB\Mongo\Writer\Writer;
-use Jasny\DB\Option\Functions as opts;
+use Jasny\DB\Option\Functions as opt;
 use Jasny\DB\Schema\Schema;
 use MongoDB\Client;
 use MongoDB\Database;
@@ -74,10 +74,10 @@ class NorthwindTest extends TestCase
         $order = $reader
             ->fetch(
                 ["OrderID" => 10248],
-                opts\limit(1),
-                opts\hydrate('CustomerID')->omit('_id'),
-                opts\hydrate('EmployeeID')->fields('EmployeeID', 'LastName', 'FirstName', 'Title'),
-                opts\omit('_id'),
+                opt\limit(1),
+                opt\hydrate('CustomerID')->omit('_id'),
+                opt\hydrate('EmployeeID')->fields('EmployeeID', 'LastName', 'FirstName', 'Title'),
+                opt\omit('_id'),
             )
             ->first(true);
 
@@ -133,9 +133,9 @@ class NorthwindTest extends TestCase
         $customer = $reader
             ->fetch(
                 ["CustomerID" => "VINET"],
-                opts\limit(1),
-                opts\lookup('orders')->limit(3)->fields('OrderID', 'OrderDate')->as('Orders'),
-                opts\omit('_id')
+                opt\limit(1),
+                opt\lookup('orders')->limit(3)->fields('OrderID', 'OrderDate')->as('Orders'),
+                opt\omit('_id')
             )
             ->first(true);
 
@@ -180,9 +180,9 @@ class NorthwindTest extends TestCase
         $customer = $reader
             ->fetch(
                 ["CustomerID" => "VINET"],
-                opts\limit(1),
-                opts\lookup('orders')->count()->as('Orders'),
-                opts\fields('CustomerID', 'CompanyName', 'Orders')
+                opt\limit(1),
+                opt\lookup('orders')->count()->as('Orders'),
+                opt\fields('CustomerID', 'CompanyName', 'Orders')
             )
             ->first(true);
 
