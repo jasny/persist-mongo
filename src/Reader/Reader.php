@@ -8,7 +8,6 @@ use Improved as i;
 use Jasny\DB\Filter\FilterItem;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Mongo\AbstractService;
-use Jasny\DB\Mongo\Query\Filter\ApplyHydrate;
 use Jasny\DB\Mongo\Query\Filter\ApplyLookup;
 use Jasny\DB\Mongo\Query\Filter\ApplyProjection;
 use Jasny\DB\Mongo\Query\Filter\ApplyLimit;
@@ -21,6 +20,7 @@ use Jasny\DB\Option\OptionInterface;
 use Jasny\DB\Query\ApplyMapToFilter;
 use Jasny\DB\Query\Composer;
 use Jasny\DB\Query\FilterParser;
+use Jasny\DB\Query\NestLookup;
 use Jasny\DB\Query\SetMap;
 use Jasny\DB\Reader\ReadInterface;
 use Jasny\DB\Result\Result;
@@ -45,10 +45,10 @@ class Reader extends AbstractService implements ReadInterface
         parent::__construct($storage);
 
         $this->composer = new Composer(
-            new SetMap(fn(MapInterface $map) => new AssertMap($map)),
+            //new SetMap(fn(MapInterface $map) => new AssertMap($map)),
             new FilterParser(),
             new ApplyMapToFilter(),
-            new ApplyHydrate(),
+            new NestLookup(),
             new ApplyLookup(),
             new FilterComposer(),
             new ApplyProjection(),

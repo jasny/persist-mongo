@@ -45,8 +45,8 @@ class NorthwindTest extends TestCase
 
         $this->schema = (new Schema())
             ->withOneToMany('customers', 'orders', ['CustomerID' => 'CustomerID'])
-            ->withOneToMany('orders', 'order_details', ['OrderID' => 'OrderID'])
-            ->withManyToOne('order_details', 'products', ['ProductID' => 'ProductID'])
+            ->withOneToMany('orders', 'order-details', ['OrderID' => 'OrderID'])
+            ->withManyToOne('order-details', 'products', ['ProductID' => 'ProductID'])
             ->withManyToOne('products', 'categories', ['CategoryID' => 'CategoryID'])
             ->withManyToOne('products', 'suppliers', ['SupplierID' => 'SupplierID'])
             ->withOneToMany('employees', 'orders', ['EmployeeID' => 'EmployeeID']);
@@ -126,6 +126,64 @@ class NorthwindTest extends TestCase
         $this->assertEquals($expected, $order);
     }
 
+    public function testFetchOrderWithDetails()
+    {
+        $reader = $this->reader->for('orders');
+
+        $order = $reader
+            ->fetch(
+                ["OrderID" => 10248],
+                opt\limit(1),
+                opt\lookup('order-details')->omit('_id')->as('Details'),
+                opt\omit('_id'),
+            )
+            ->first(true);
+
+        $this->assertIsArray($order);
+
+        $expected = [
+            'OrderID' => 10248,
+            'CustomerID' => 'VINET',
+            'EmployeeID' => 5,
+            'OrderDate' => '1996-07-04 00:00:00.000',
+            'RequiredDate' => '1996-08-01 00:00:00.000',
+            'ShippedDate' => '1996-07-16 00:00:00.000',
+            'ShipVia' => 3,
+            'Freight' => 32.38,
+            'ShipName' => 'Vins et alcools Chevalier',
+            'ShipAddress' => '59 rue de l\'Abbaye',
+            'ShipCity' => 'Reims',
+            'ShipRegion' => 'NULL',
+            'ShipPostalCode' => 51100,
+            'ShipCountry' => 'France',
+            'Details' => [
+                [
+                    'OrderID' => 10248,
+                    'ProductID' => 11,
+                    'UnitPrice' => 14.0,
+                    'Quantity' => 12,
+                    'Discount' => 0,
+                ],
+                [
+                    'OrderID' => 10248,
+                    'ProductID' => 42,
+                    'UnitPrice' => 9.8,
+                    'Quantity' => 10,
+                    'Discount' => 0,
+                ],
+                [
+                    'OrderID' => 10248,
+                    'ProductID' => 72,
+                    'UnitPrice' => 34.8,
+                    'Quantity' => 5,
+                    'Discount' => 0,
+                ],
+            ],
+        ];
+
+        $this->assertEquals($expected, $order);
+    }
+
     public function testFetchCustomerWithOrders()
     {
         $reader = $this->reader->for('customers');
@@ -134,8 +192,11 @@ class NorthwindTest extends TestCase
             ->fetch(
                 ["CustomerID" => "VINET"],
                 opt\limit(1),
-                opt\lookup('orders')->limit(3)->fields('OrderID', 'OrderDate')->as('Orders'),
-                opt\omit('_id')
+                opt\lookup('orders')->sort('OrderDate')->limit(3)
+                    ->fields('OrderID', 'OrderDate')->as('Orders'),
+                opt\lookup('order-details')->for('Orders')->as('Details'),
+                opt\lookup('products')->for('Orders.Details')->as('Product'),
+                opt\omit('_id'),
             )
             ->first(true);
 
@@ -158,14 +219,17 @@ class NorthwindTest extends TestCase
                 [
                     'OrderID' => 10248,
                     'OrderDate' => '1996-07-04 00:00:00.000',
+                    'Details' => [],
                 ],
                 [
                     'OrderID' => 10274,
                     'OrderDate' => '1996-08-06 00:00:00.000',
+                    'Details' => [],
                 ],
                 [
                     'OrderID' => 10295,
                     'OrderDate' => '1996-09-02 00:00:00.000',
+                    'Details' => [],
                 ],
             ],
         ];

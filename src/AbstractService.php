@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Jasny\DB\Mongo;
 
 use Improved as i;
-use Improved\IteratorPipeline\Pipeline;
 use Jasny\DB\Map\MapInterface;
 use Jasny\DB\Map\NoMap;
 use Jasny\DB\Mongo\Model\BSONToPHP;
@@ -227,17 +226,28 @@ abstract class AbstractService
     /**
      * Configure map in opts.
      *
+     * {@internal Not using pipeline; optimized for performance}}
+     *
      * @param OptionInterface[] $opts
      */
     private function configureMap(array &$opts): void
     {
-        $map = opt\setting('map', $this->getMap())->findIn($opts, MapInterface::class);
+        $hasMap = false;
 
-        $opts = Pipeline::with($opts)
-            ->filter(fn($opt) => !($opt instanceof SettingOption) || $opt->getName() !== 'map')
-            ->toArray();
+        foreach ($opts as $key => $opt) {
+            $isMap = $opt instanceof SettingOption &&
+                $opt->getName() === 'map' &&
+                $opt->getValue() instanceof MapInterface;
 
-        $opts[] = opt\setting('map', $map->withOpts($opts));
+            if ($isMap) {
+                $opts[$key] = opt\setting('map', $opt->getValue()->withOpts($opts));
+                $hasMap = true;
+            }
+        }
+
+        if (!$hasMap) {
+            $opts[] = opt\setting('map', $this->getMap()->withOpts($opts));
+        }
     }
 
 
